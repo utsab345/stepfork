@@ -26,6 +26,25 @@ Day 1 of the project is repository and tooling setup only. The architectural
 packages are intentionally empty, and runtime agent-recording functionality is
 not implemented yet.
 
+The initial typed `.sftrace` v0.1 model and JSON Schema foundation is now
+implemented. Storage, validation CLI, recording, replay, diffing, and export
+remain planned work.
+
+```python
+from stepfork import ToolCall, Trace
+
+trace = Trace(agent_name="demo-agent")
+
+event = trace.add(
+    ToolCall(
+        name="search",
+        input={"query": "Kathmandu flights"},
+    )
+)
+
+print(event.step)
+```
+
 ## Planned Workflow
 
 ```text
