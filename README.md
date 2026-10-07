@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/stepfork-logo.png" alt="Stepfork logo" width="420">
+  <img src="assets/stepfork-logo.png" alt="Stepfork logo" width="220">
 </p>
 
 <h1 align="center">Stepfork</h1>
@@ -8,8 +8,9 @@
   <strong>Your agent failed. Make the failure a test.</strong>
 </p>
 
-Stepfork is a local-first behavioral regression-testing framework for AI
-agents.
+<p align="center">
+  Local-first behavioral regression testing for AI agents.
+</p>
 
 Product goal:
 
