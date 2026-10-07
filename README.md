@@ -1,6 +1,12 @@
-# Stepfork
+<p align="center">
+  <img src="assets/stepfork-logo.png" alt="Stepfork logo" width="420">
+</p>
 
-Your agent failed. Make the failure a test.
+<h1 align="center">Stepfork</h1>
+
+<p align="center">
+  <strong>Your agent failed. Make the failure a test.</strong>
+</p>
 
 Stepfork is a local-first behavioral regression-testing framework for AI
 agents.
