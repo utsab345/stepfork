@@ -1,0 +1,25 @@
+{
+  "format": "stepfork",
+  "schema_version": "0.1",
+  "run_id": "run_failed_tool_001",
+  "agent_name": "golden-tool-agent",
+  "created_at": "2026-10-08T10:00:00Z",
+  "status": "failed",
+  "failure": {
+    "type": "ToolTimeout",
+    "message": "flight_search timed out",
+    "step": 3
+  },
+  "environment": {
+    "python": null,
+    "os": null,
+    "stepfork_version": null
+  },
+  "totals": {
+    "events": 5,
+    "llm_calls": 0,
+    "tool_calls": 1,
+    "cost_usd": null,
+    "duration_ms": null
+  }
+}

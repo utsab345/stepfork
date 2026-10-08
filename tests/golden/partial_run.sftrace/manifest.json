@@ -1,0 +1,21 @@
+{
+  "format": "stepfork",
+  "schema_version": "0.1",
+  "run_id": "run_partial_001",
+  "agent_name": "golden-partial-agent",
+  "created_at": "2026-10-08T10:00:00Z",
+  "status": "running",
+  "failure": null,
+  "environment": {
+    "python": null,
+    "os": null,
+    "stepfork_version": null
+  },
+  "totals": {
+    "events": 1,
+    "llm_calls": 0,
+    "tool_calls": 1,
+    "cost_usd": null,
+    "duration_ms": null
+  }
+}

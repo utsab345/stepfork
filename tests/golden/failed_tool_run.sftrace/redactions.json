@@ -1,0 +1,11 @@
+{
+  "schema_version": "0.1",
+  "entries": [
+    {
+      "event_id": "evt_tool_002",
+      "path": "/input/api_key",
+      "reason": "sensitive_key",
+      "replacement": "[REDACTED]"
+    }
+  ]
+}

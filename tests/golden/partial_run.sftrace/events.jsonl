@@ -1,0 +1,1 @@
+{"id":"evt_partial_001","run_id":"run_partial_001","parent_id":null,"step":0,"type":"tool_call","timestamp":"2026-10-08T10:00:00Z","duration_ms":null,"status":"ok","replay_policy":"frozen","input_hash":"796aa512ce7a662383db7ccddad119339db5510e3176c2be074025bae0c3b00b","output_hash":null,"redactions":[],"name":"search","input":{"query":"Kathmandu flights"}}
