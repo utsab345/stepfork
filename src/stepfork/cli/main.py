@@ -6,6 +6,7 @@ import typer
 from rich.console import Console
 
 from stepfork import __version__
+from stepfork.cli.inspect import inspect_command
 from stepfork.cli.validate import validate_command
 
 app = typer.Typer(
@@ -16,6 +17,7 @@ app = typer.Typer(
 
 console = Console()
 
+app.command("inspect")(inspect_command)
 app.command("validate")(validate_command)
 
 

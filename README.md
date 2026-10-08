@@ -53,6 +53,14 @@ The `--partial` flag is required here because the example intentionally saves
 only a `tool_call` event. Strict execution validation expects a complete trace
 with a `run_start` event.
 
+Inspect a saved trace locally:
+
+```bash
+stepfork inspect demo.sftrace
+stepfork inspect demo.sftrace --json
+stepfork inspect demo.sftrace --errors-only
+```
+
 ## Integrity and Redaction
 
 Stepfork applies best-effort redaction when saving `.sftrace` bundles. It
@@ -125,8 +133,9 @@ stepfork export latest.sftrace --pytest
 ### v0.1
 
 - Portable `.sftrace`
+- Validate CLI
+- Inspect CLI
 - Recording
-- Inspect
 - Frozen replay
 - Behavioral diff
 - pytest export
