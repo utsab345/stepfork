@@ -4,13 +4,19 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal, TypeAlias, TypeVar, cast
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing_extensions import TypeAliasType
 
-from stepfork.trace.manifest import RunStatus
+from stepfork.trace.manifest import (
+    EnvironmentInfo,
+    FailureInfo,
+    RunStatus,
+    TraceTotals,
+)
 from stepfork.trace.replay_policy import ReplayPolicy
 
 JsonPrimitive: TypeAlias = str | int | float | bool | None
@@ -194,8 +200,8 @@ class Trace(BaseModel):
     """Minimal in-memory trace container.
 
     `Trace.add()` uses 0-based logical steps: the first added event receives
-    step `0`, the second receives step `1`, and so on. This model does not
-    implement filesystem persistence, loading, or cross-event validation.
+    step `0`, the second receives step `1`, and so on. Partial traces can be
+    saved for development and later validated in partial or strict mode.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -203,6 +209,10 @@ class Trace(BaseModel):
     run_id: str = Field(default_factory=_new_run_id, min_length=1)
     agent_name: str = Field(min_length=1)
     created_at: datetime = Field(default_factory=_utc_now)
+    status: RunStatus = RunStatus.RUNNING
+    failure: FailureInfo | None = None
+    environment: EnvironmentInfo = Field(default_factory=EnvironmentInfo)
+    totals: TraceTotals = Field(default_factory=TraceTotals)
     events: list[Event] = Field(default_factory=list)
 
     @field_validator("created_at")
@@ -219,4 +229,43 @@ class Trace(BaseModel):
             update={"run_id": self.run_id, "step": len(self.events)}
         )
         self.events.append(cast(Event, normalized))
+        self.totals = self._computed_totals()
         return normalized
+
+    def _computed_totals(self) -> TraceTotals:
+        """Return manifest counters derived from the current event sequence."""
+        return TraceTotals(
+            events=len(self.events),
+            llm_calls=sum(event.type is EventType.LLM_REQUEST for event in self.events),
+            tool_calls=sum(event.type is EventType.TOOL_CALL for event in self.events),
+            cost_usd=self.totals.cost_usd,
+            duration_ms=self.totals.duration_ms,
+        )
+
+    def save(
+        self,
+        path: str | Path,
+        *,
+        status: RunStatus | str | None = None,
+        failure: FailureInfo | None = None,
+        environment: EnvironmentInfo | None = None,
+        overwrite: bool = False,
+    ) -> Path:
+        """Persist this trace as a `.sftrace` directory bundle."""
+        from stepfork.trace.storage import save_trace
+
+        return save_trace(
+            self,
+            Path(path),
+            status=status,
+            failure=failure,
+            environment=environment,
+            overwrite=overwrite,
+        )
+
+    @classmethod
+    def load(cls, path: str | Path) -> Trace:
+        """Load a trace from a `.sftrace` directory bundle."""
+        from stepfork.trace.storage import load_trace
+
+        return load_trace(Path(path))

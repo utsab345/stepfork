@@ -22,13 +22,11 @@ Product goal:
 Stepfork is experimental. The API, CLI, and `.sftrace` trace format may change
 before v1.0.
 
-Day 1 of the project is repository and tooling setup only. The architectural
-packages are intentionally empty, and runtime agent-recording functionality is
-not implemented yet.
+Stepfork now includes the initial typed `.sftrace` v0.1 model, directory
+storage, and structural validation. Runtime agent recording, replay, diffing,
+and export remain planned work.
 
-The initial typed `.sftrace` v0.1 model and JSON Schema foundation is now
-implemented. Storage, validation CLI, recording, replay, diffing, and export
-remain planned work.
+## Offline Trace API
 
 ```python
 from stepfork import ToolCall, Trace
@@ -42,8 +40,18 @@ event = trace.add(
     )
 )
 
-print(event.step)
+trace.save("demo.sftrace")
 ```
+
+Validate this development trace in partial mode:
+
+```bash
+stepfork validate demo.sftrace --partial
+```
+
+The `--partial` flag is required here because the example intentionally saves
+only a `tool_call` event. Strict execution validation expects a complete trace
+with a `run_start` event.
 
 ## Planned Workflow
 

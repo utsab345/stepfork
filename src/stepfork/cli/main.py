@@ -6,6 +6,7 @@ import typer
 from rich.console import Console
 
 from stepfork import __version__
+from stepfork.cli.validate import validate_command
 
 app = typer.Typer(
     name="stepfork",
@@ -14,6 +15,8 @@ app = typer.Typer(
 )
 
 console = Console()
+
+app.command("validate")(validate_command)
 
 
 def version_callback(value: bool) -> None:
