@@ -22,9 +22,18 @@ Product goal:
 Stepfork is experimental. The API, CLI, and `.sftrace` trace format may change
 before v1.0.
 
-Stepfork now includes the initial typed `.sftrace` v0.1 model, directory
-storage, and structural validation. Runtime agent recording, replay, diffing,
-and export remain planned work.
+Stepfork now includes typed `.sftrace` v0.1 models, directory storage,
+structural validation, best-effort redaction, integrity verification, and local
+trace inspection. Runtime agent recording, replay, diffing, and export remain
+planned work.
+
+## Installation
+
+For local development:
+
+```bash
+uv sync
+```
 
 ## Offline Trace API
 
@@ -41,12 +50,15 @@ event = trace.add(
 )
 
 trace.save("demo.sftrace")
+loaded = Trace.load("demo.sftrace")
 ```
 
-Validate this development trace in partial mode:
+Validate traces:
 
 ```bash
 stepfork validate demo.sftrace --partial
+stepfork validate demo.sftrace
+stepfork validate demo.sftrace --verify-integrity
 ```
 
 The `--partial` flag is required here because the example intentionally saves
@@ -133,12 +145,16 @@ stepfork export latest.sftrace --pytest
 ### v0.1
 
 - Portable `.sftrace`
+- Trace save/load
+- Structural validation
+- Best-effort redaction
+- Integrity verification
 - Validate CLI
 - Inspect CLI
-- Recording
-- Frozen replay
-- Behavioral diff
-- pytest export
+- Recording (planned)
+- Frozen replay (planned)
+- Behavioral diff (planned)
+- pytest export (planned)
 
 ### v0.2
 

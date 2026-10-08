@@ -44,3 +44,6 @@ jobs:
 
       - name: Pytest
         run: uv run pytest --cov=stepfork --cov-report=term-missing
+
+      - name: Build package
+        run: uv build
