@@ -1,5 +1,14 @@
 """Portable Stepfork trace format and serialization."""
 
+from stepfork.trace.canonical import CANONICAL_JSON_PROFILE, canonical_json_bytes
+from stepfork.trace.hashing import hash_event_payloads, hash_json
+from stepfork.trace.integrity import (
+    IntegrityIssue,
+    IntegrityRecord,
+    IntegrityResult,
+    IntegrityStatus,
+    verify_bundle_integrity,
+)
 from stepfork.trace.manifest import (
     EnvironmentInfo,
     FailureInfo,
@@ -23,6 +32,13 @@ from stepfork.trace.models import (
     ToolResult,
     Trace,
 )
+from stepfork.trace.redaction import (
+    REDACTION_REPLACEMENT,
+    RedactionEntry,
+    RedactionManifest,
+    RedactionResult,
+    redact_json,
+)
 from stepfork.trace.replay_policy import ReplayPolicy
 from stepfork.trace.schema import (
     event_json_schema,
@@ -43,6 +59,8 @@ from stepfork.trace.validation import (
 )
 
 __all__ = [
+    "CANONICAL_JSON_PROFILE",
+    "REDACTION_REPLACEMENT",
     "EnvironmentInfo",
     "ErrorEvent",
     "Event",
@@ -50,9 +68,16 @@ __all__ = [
     "EventStatus",
     "EventType",
     "FailureInfo",
+    "IntegrityIssue",
+    "IntegrityRecord",
+    "IntegrityResult",
+    "IntegrityStatus",
     "JsonValue",
     "LLMRequest",
     "LLMResponse",
+    "RedactionEntry",
+    "RedactionManifest",
+    "RedactionResult",
     "ReplayPolicy",
     "RunEnd",
     "RunStart",
@@ -67,11 +92,16 @@ __all__ = [
     "ValidationIssue",
     "ValidationResult",
     "build_manifest",
+    "canonical_json_bytes",
     "event_json_schema",
+    "hash_event_payloads",
+    "hash_json",
     "load_trace",
     "manifest_json_schema",
+    "redact_json",
     "save_trace",
     "trace_json_schema",
     "validate_bundle",
     "validate_trace",
+    "verify_bundle_integrity",
 ]

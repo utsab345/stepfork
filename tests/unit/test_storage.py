@@ -28,6 +28,7 @@ def test_save_creates_required_files_and_json(tmp_path: Path) -> None:
     assert (destination / "manifest.json").is_file()
     assert (destination / "events.jsonl").is_file()
     assert (destination / "redactions.json").is_file()
+    assert (destination / "integrity.json").is_file()
     assert json.loads((destination / "manifest.json").read_text())
     assert json.loads((destination / "redactions.json").read_text()) == {
         "schema_version": "0.1",
@@ -60,6 +61,22 @@ def test_unicode_and_nested_json_survive_round_trip(tmp_path: Path) -> None:
     event = loaded.events[0]
     assert isinstance(event, ToolCall)
     assert event.input == payload
+
+
+def test_save_redacts_persisted_secret_without_mutating_trace(tmp_path: Path) -> None:
+    secret = "sk-syntheticstorage123456"
+    trace = Trace(agent_name="demo-agent")
+    event = trace.add(ToolCall(name="search", input={"api_key": secret}))
+
+    destination = trace.save(tmp_path / "secret.sftrace")
+
+    assert event.input == {"api_key": secret}
+    persisted = "\n".join(item.read_text() for item in destination.iterdir())
+    assert secret not in persisted
+    loaded = Trace.load(destination)
+    assert loaded.events[0].model_dump(mode="json")["input"]["api_key"] == (
+        "[REDACTED]"
+    )
 
 
 def test_path_accepts_str_and_path(tmp_path: Path) -> None:
@@ -193,5 +210,7 @@ def test_event_order_and_identity_survive_round_trip(tmp_path: Path) -> None:
     assert [event.id for event in loaded.events] == [event.id for event in trace.events]
     assert [event.step for event in loaded.events] == [0, 1, 2, 3]
     assert loaded.events[1].parent_id == start.id
-    assert loaded.events[1].input_hash == "input123"
-    assert loaded.events[2].output_hash == "output123"
+    assert loaded.events[1].input_hash != "input123"
+    assert loaded.events[2].output_hash != "output123"
+    assert loaded.events[1].input_hash is not None
+    assert loaded.events[2].output_hash is not None

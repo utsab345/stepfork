@@ -7,6 +7,11 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
+from stepfork.trace.hashing import (
+    event_payload_hash_fields,
+    verify_event_payload_hashes,
+)
+from stepfork.trace.integrity import IntegrityStatus, verify_bundle_integrity
 from stepfork.trace.manifest import RunStatus
 from stepfork.trace.models import EventType, Trace
 from stepfork.trace.storage import REQUIRED_FILES, TraceStorageError, load_trace
@@ -39,7 +44,12 @@ class ValidationResult(BaseModel):
         return self
 
 
-def validate_trace(trace: Trace, *, strict: bool = True) -> ValidationResult:
+def validate_trace(
+    trace: Trace,
+    *,
+    strict: bool = True,
+    verify_payload_hashes: bool = False,
+) -> ValidationResult:
     """Validate cross-event structure for an in-memory trace."""
     issues: list[ValidationIssue] = []
 
@@ -135,6 +145,30 @@ def validate_trace(trace: Trace, *, strict: bool = True) -> ValidationResult:
         if event.type is EventType.ERROR:
             has_error_event = True
 
+        if verify_payload_hashes:
+            expected_hash_fields = event_payload_hash_fields(event)
+            for field in sorted(expected_hash_fields):
+                if getattr(event, field) is None:
+                    issues.append(
+                        ValidationIssue(
+                            code="integrity_unverified",
+                            message=f"Event {event.id} is missing {field}.",
+                            event_id=event.id,
+                            step=event.step,
+                            location=f"events.jsonl:{field}",
+                        )
+                    )
+            for field in verify_event_payload_hashes(event):
+                issues.append(
+                    ValidationIssue(
+                        code="payload_hash_mismatch",
+                        message=f"Event {event.id} has a {field} mismatch.",
+                        event_id=event.id,
+                        step=event.step,
+                        location=f"events.jsonl:{field}",
+                    )
+                )
+
     if strict and run_start_count != 1:
         issues.append(
             ValidationIssue(
@@ -161,7 +195,12 @@ def validate_trace(trace: Trace, *, strict: bool = True) -> ValidationResult:
     return ValidationResult(issues=issues)
 
 
-def validate_bundle(path: str | Path, *, strict: bool = True) -> ValidationResult:
+def validate_bundle(
+    path: str | Path,
+    *,
+    strict: bool = True,
+    verify_integrity: bool = False,
+) -> ValidationResult:
     """Load and validate a `.sftrace` bundle."""
     bundle_path = Path(path)
     missing = _missing_files(bundle_path)
@@ -191,7 +230,26 @@ def validate_bundle(path: str | Path, *, strict: bool = True) -> ValidationResul
             ]
         )
 
-    return validate_trace(trace, strict=strict)
+    result = validate_trace(
+        trace,
+        strict=strict,
+        verify_payload_hashes=verify_integrity,
+    )
+    if not verify_integrity:
+        return result
+
+    integrity_result = verify_bundle_integrity(bundle_path)
+    integrity_issues = [
+        ValidationIssue(
+            code=issue.code,
+            message=issue.message,
+            location=issue.file,
+        )
+        for issue in integrity_result.issues
+    ]
+    if integrity_result.status is IntegrityStatus.VERIFIED:
+        return result
+    return ValidationResult(issues=[*result.issues, *integrity_issues])
 
 
 def _missing_files(path: Path) -> list[Path]:

@@ -177,3 +177,20 @@ def test_multiple_independent_issues_returned_together() -> None:
         "invalid_parent",
         "run_start_count",
     }.issubset(issue_codes(trace))
+
+
+def test_payload_hash_mismatch_rejected_when_requested() -> None:
+    trace = complete_trace()
+    trace.events[1] = trace.events[1].model_copy(update={"input_hash": "0" * 64})
+
+    result = validate_trace(trace, verify_payload_hashes=True)
+
+    assert "payload_hash_mismatch" in {issue.code for issue in result.issues}
+
+
+def test_missing_payload_hash_unverified_when_requested() -> None:
+    trace = complete_trace()
+
+    result = validate_trace(trace, verify_payload_hashes=True)
+
+    assert "integrity_unverified" in {issue.code for issue in result.issues}

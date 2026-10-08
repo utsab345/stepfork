@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from pydantic import TypeAdapter, ValidationError
 
+from stepfork.trace.hashing import hash_event_payloads
 from stepfork.trace.manifest import (
     EnvironmentInfo,
     FailureInfo,
@@ -17,6 +18,7 @@ from stepfork.trace.manifest import (
     TraceTotals,
 )
 from stepfork.trace.models import Event, EventType, Trace
+from stepfork.trace.redaction import RedactionManifest, prepare_trace_for_persistence
 
 SCHEMA_VERSION = "0.1"
 MANIFEST_FILE = "manifest.json"
@@ -73,6 +75,8 @@ def save_trace(
         failure=failure,
         environment=environment,
     )
+    prepared = prepare_trace_for_persistence(trace, manifest)
+    persisted_events = [hash_event_payloads(event) for event in prepared.trace.events]
 
     if path.exists() and not path.is_dir():
         raise TraceStorageError(f"{path} exists and is not a directory")
@@ -88,9 +92,12 @@ def save_trace(
     temporary.mkdir()
 
     try:
-        _write_manifest(temporary / MANIFEST_FILE, manifest)
-        _write_events(temporary / EVENTS_FILE, trace.events)
-        _write_redactions(temporary / REDACTIONS_FILE)
+        _write_manifest(temporary / MANIFEST_FILE, prepared.manifest)
+        _write_events(temporary / EVENTS_FILE, persisted_events)
+        _write_redactions(temporary / REDACTIONS_FILE, prepared.redactions)
+        from stepfork.trace.integrity import write_bundle_integrity
+
+        write_bundle_integrity(temporary)
 
         if path.exists():
             if any(path.iterdir()):
@@ -112,10 +119,6 @@ def save_trace(
             shutil.rmtree(temporary)
         raise
 
-    trace.status = manifest.status
-    trace.failure = manifest.failure
-    trace.environment = manifest.environment
-    trace.totals = manifest.totals
     return path
 
 
@@ -184,10 +187,9 @@ def _write_events(path: Path, events: list[Event]) -> None:
             file.write("\n")
 
 
-def _write_redactions(path: Path) -> None:
-    redactions = {"schema_version": SCHEMA_VERSION, "entries": []}
+def _write_redactions(path: Path, redactions: RedactionManifest) -> None:
     path.write_text(
-        json.dumps(redactions, indent=2, sort_keys=True) + "\n",
+        redactions.model_dump_json(indent=2) + "\n",
         encoding="utf-8",
     )
 
@@ -208,7 +210,7 @@ def _read_manifest(path: Path) -> TraceManifest:
     try:
         return TraceManifest.model_validate(payload)
     except ValidationError as exc:
-        raise TraceStorageError(f"{path}: invalid manifest: {exc}") from exc
+        raise TraceStorageError(f"{path}: invalid manifest") from exc
 
 
 def _read_events(path: Path) -> list[Event]:
@@ -226,9 +228,7 @@ def _read_events(path: Path) -> list[Event]:
             try:
                 events.append(_event_adapter.validate_python(payload))
             except ValidationError as exc:
-                raise TraceStorageError(
-                    f"{path}:{line_number}: invalid event: {exc}"
-                ) from exc
+                raise TraceStorageError(f"{path}:{line_number}: invalid event") from exc
     return events
 
 
@@ -244,5 +244,7 @@ def _read_redactions(path: Path) -> None:
             f"{path}: unsupported redactions schema version "
             f"{payload.get('schema_version')!r}"
         )
-    if not isinstance(payload.get("entries"), list):
-        raise TraceStorageError(f"{path}: invalid redactions entries")
+    try:
+        RedactionManifest.model_validate(payload)
+    except ValidationError as exc:
+        raise TraceStorageError(f"{path}: invalid redactions metadata") from exc

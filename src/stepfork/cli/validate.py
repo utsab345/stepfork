@@ -9,7 +9,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from stepfork.trace import TraceStorageError, validate_bundle
+from stepfork.trace import TraceStorageError, ValidationResult, validate_bundle
+from stepfork.trace.integrity import IntegrityStatus, verify_bundle_integrity
 from stepfork.trace.storage import load_trace
 
 console = Console()
@@ -20,6 +21,8 @@ UNREADABLE_CODES = {
     "invalid_manifest",
     "invalid_event",
     "unsupported_schema",
+    "integrity_metadata_invalid",
+    "integrity_algorithm_unsupported",
 }
 
 
@@ -41,13 +44,27 @@ def validate_command(
             help="Allow incomplete in-progress traces without run_start checks.",
         ),
     ] = False,
+    verify_integrity: Annotated[
+        bool,
+        typer.Option(
+            "--verify-integrity",
+            help="Verify Day 4 payload hashes and bundle integrity metadata.",
+        ),
+    ] = False,
 ) -> None:
     """Validate a `.sftrace` bundle."""
     strict = not partial
-    result = validate_bundle(path, strict=strict)
+    structure_result = validate_bundle(path, strict=strict)
+    result = validate_bundle(
+        path,
+        strict=strict,
+        verify_integrity=verify_integrity,
+    )
 
     _print_header(path, strict=strict)
     _print_metadata(path, strict=strict)
+    if verify_integrity and structure_result.valid:
+        _print_integrity(path)
 
     if result.valid:
         console.print("[green]✓[/green] Manifest valid")
@@ -68,6 +85,8 @@ def validate_command(
         console.print()
 
     console.print(f"[red]Validation failed: {len(result.issues)} issues.[/red]")
+    if verify_integrity and _has_legacy_integrity_issue(result):
+        raise typer.Exit(3)
     has_unreadable_issue = any(
         issue.code in UNREADABLE_CODES for issue in result.issues
     )
@@ -103,3 +122,39 @@ def _print_metadata(path: Path, *, strict: bool) -> None:
     table.add_row("Mode", "strict" if strict else "partial")
     console.print(table)
     console.print()
+
+
+def _print_integrity(path: Path) -> None:
+    result = verify_bundle_integrity(path)
+    status_label = (
+        "UNVERIFIED (legacy bundle)"
+        if result.status is IntegrityStatus.UNVERIFIED_LEGACY
+        else result.status.value.upper()
+    )
+    console.print("Structure: [green]PASS[/green]")
+    style = "green" if result.status is IntegrityStatus.VERIFIED else "yellow"
+    if result.status is IntegrityStatus.MISMATCH:
+        style = "red"
+    console.print(f"Integrity: [{style}]{status_label}[/{style}]")
+    console.print()
+
+    table = Table.grid(padding=(0, 4))
+    table.add_column()
+    table.add_column()
+    for filename in ("manifest.json", "events.jsonl", "redactions.json"):
+        if filename in result.verified_files:
+            table.add_row(filename, "verified")
+            continue
+        issue = next((item for item in result.issues if item.file == filename), None)
+        table.add_row(filename, issue.message if issue else "unverified")
+    if result.status is IntegrityStatus.UNVERIFIED_LEGACY:
+        table.add_row("integrity.json", "missing legacy metadata")
+    console.print(table)
+    console.print()
+
+
+def _has_legacy_integrity_issue(result: ValidationResult) -> bool:
+    return any(
+        issue.code == "integrity_unverified" and issue.location == "integrity.json"
+        for issue in result.issues
+    )

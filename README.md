@@ -53,6 +53,38 @@ The `--partial` flag is required here because the example intentionally saves
 only a `tool_call` event. Strict execution validation expects a complete trace
 with a `run_start` event.
 
+## Integrity and Redaction
+
+Stepfork applies best-effort redaction when saving `.sftrace` bundles. It
+recursively redacts known sensitive keys such as `api_key`, `authorization`,
+`password`, and common credential-looking strings before writing trace files.
+Redaction metadata is stored in `redactions.json` without the original secret.
+
+Persisted event payloads also receive SHA-256 hashes computed from Stepfork's
+v0.1 canonical JSON profile after redaction. New bundles include an
+`integrity.json` file with SHA-256 digests for `manifest.json`, `events.jsonl`,
+and `redactions.json`.
+
+Verify bundle integrity explicitly:
+
+```bash
+stepfork validate demo.sftrace --verify-integrity
+```
+
+Integrity status means:
+
+- `verified`: the bundle's recorded file digests match the current files.
+- `mismatch`: at least one recorded digest or payload hash does not match.
+- `unverified_legacy`: the bundle predates `integrity.json`; it can still be
+  structurally valid, but it has not been verified.
+
+These checks are a release prerequisite, not proof that a trace is safe to
+publish. Pattern-based redaction can miss sensitive information embedded in
+unusual tool outputs, model responses, or domain-specific payloads. SHA-256 is
+not encryption, and the unkeyed integrity file is not a digital signature. An
+attacker who can modify both the trace files and `integrity.json` can rewrite
+the record. Inspect traces carefully before sharing them.
+
 ## Planned Workflow
 
 ```text

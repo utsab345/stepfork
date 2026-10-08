@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import shutil
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -40,6 +42,52 @@ def test_validate_valid_trace(tmp_path: Path) -> None:
     assert "Validation passed" in result.stdout
     assert "Mode" in result.stdout
     assert "strict" in result.stdout
+
+
+def test_validate_with_integrity_verification(tmp_path: Path) -> None:
+    path = complete_trace().save(
+        tmp_path / "valid.sftrace",
+        status=RunStatus.COMPLETED,
+    )
+
+    result = runner.invoke(app, ["validate", str(path), "--verify-integrity"])
+
+    assert result.exit_code == 0
+    assert "Integrity" in result.stdout
+    assert "VERIFIED" in result.stdout
+
+
+def test_validate_with_integrity_mismatch(tmp_path: Path) -> None:
+    path = complete_trace().save(
+        tmp_path / "tampered.sftrace",
+        status=RunStatus.COMPLETED,
+    )
+    lines = (path / "events.jsonl").read_text().splitlines()
+    event = json.loads(lines[1])
+    event["input"]["query"] = "Pokhara flights"
+    lines[1] = json.dumps(event)
+    (path / "events.jsonl").write_text("\n".join(lines) + "\n")
+
+    result = runner.invoke(app, ["validate", str(path), "--verify-integrity"])
+
+    assert result.exit_code == 1
+    assert "MISMATCH" in result.stdout
+    assert "events.jsonl" in result.stdout
+
+
+def test_validate_legacy_integrity_returns_unavailable(tmp_path: Path) -> None:
+    path = complete_trace().save(
+        tmp_path / "valid.sftrace",
+        status=RunStatus.COMPLETED,
+    )
+    legacy = tmp_path / "legacy.sftrace"
+    shutil.copytree(path, legacy)
+    (legacy / "integrity.json").unlink()
+
+    result = runner.invoke(app, ["validate", str(legacy), "--verify-integrity"])
+
+    assert result.exit_code == 3
+    assert "UNVERIFIED" in result.stdout
 
 
 def test_validate_invalid_trace(tmp_path: Path) -> None:
