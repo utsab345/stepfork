@@ -48,6 +48,8 @@ stepfork = "stepfork.cli.main:app"
 [dependency-groups]
 dev = [
     "hypothesis>=6.0",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.7",
     "mypy>=1.10",
     "pytest>=8.0",
     "pytest-cov>=5.0",
