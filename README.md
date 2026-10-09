@@ -84,7 +84,7 @@ The `--pre` flag is required while Stepfork is a pre-release. You can also
 install from the tagged GitHub repository:
 
 ```bash
-pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a2"
+pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a3"
 ```
 
 Requires Python 3.11, 3.12, or 3.13. This installs the `stepfork` CLI and the
@@ -189,9 +189,12 @@ stepfork export failure.sftrace --pytest \
   --output test_notify_fixed.py --overwrite
 ```
 
-Run the tests. The buggy implementation fails; the fix passes:
+Run the tests. The buggy implementation fails; the fix passes. The exported
+tests use pytest, which is not a runtime dependency of Stepfork, so install it
+first if your environment does not already have it:
 
 ```bash
+pip install pytest   # only needed to run the exported regression tests
 python -m pytest -q test_notify_buggy.py   # 1 failed (behavior mismatch)
 python -m pytest -q test_notify_fixed.py   # 1 passed
 ```

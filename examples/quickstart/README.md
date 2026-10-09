@@ -29,6 +29,9 @@ From the repository root:
 uv run python examples/quickstart/demo.py
 ```
 
+`uv sync` installs pytest for the demo; the generated regression test is run
+with pytest, which is not a runtime dependency of the Stepfork package itself.
+
 The demo:
 
 1. Records the buggy run to `failure.sftrace`.

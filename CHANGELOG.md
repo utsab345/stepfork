@@ -4,6 +4,25 @@ All notable changes to Stepfork are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.0a3] - 2026-10-09
+
+Documentation-focused alpha that corrects the description shown on the PyPI
+project page (the page renders the README captured in the published package
+metadata, so `0.1.0a2` displayed stale "not on PyPI" text).
+
+### Changed
+
+- README `0.1.0a2` notes removed: installation now leads with
+  `pip install --pre stepfork`, the "not on PyPI yet" statements are gone, and
+  the logo and workflow diagram use absolute `raw.githubusercontent.com` URLs
+  so they render on the PyPI project page.
+- Quickstart (README, `docs/getting-started.md`, `examples/quickstart`) states
+  explicitly that pytest is required to run the exported regression tests and
+  is not a runtime dependency.
+- Version references for the current release updated to `0.1.0a3`.
+
+[0.1.0a3]: https://github.com/utsab345/stepfork/releases/tag/v0.1.0a3
+
 ## [0.1.0a2] - 2026-10-09
 
 First distribution published to PyPI, using GitHub Actions trusted publishing
