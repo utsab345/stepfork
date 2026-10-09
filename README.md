@@ -189,9 +189,12 @@ stepfork export failure.sftrace --pytest \
   --output test_notify_fixed.py --overwrite
 ```
 
-Run the tests. The buggy implementation fails; the fix passes:
+Run the tests. The buggy implementation fails; the fix passes. The exported
+tests use pytest, which is not a runtime dependency of Stepfork, so install it
+first if your environment does not already have it:
 
 ```bash
+pip install pytest   # only needed to run the exported regression tests
 python -m pytest -q test_notify_buggy.py   # 1 failed (behavior mismatch)
 python -m pytest -q test_notify_fixed.py   # 1 passed
 ```

@@ -97,9 +97,11 @@ stepfork export failure.sftrace --pytest \
 ```
 
 `expected.json` holds the behavior you want after the fix. The generated test
-fails on the buggy entrypoint and passes on the fixed one:
+fails on the buggy entrypoint and passes on the fixed one. pytest is not a
+runtime dependency, so install it first if needed:
 
 ```bash
+pip install pytest   # only needed to run the exported regression tests
 python -m pytest -q test_notify_buggy.py   # 1 failed (behavior mismatch)
 python -m pytest -q test_notify_fixed.py   # 1 passed
 ```
