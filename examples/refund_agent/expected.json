@@ -1,0 +1,7 @@
+{
+  "decision": "approve",
+  "order_id": "ORD-2024-7717",
+  "refund_amount": 59.99,
+  "reason": "Refund approved.",
+  "plan": "Decide refund eligibility from the policy, then approve or deny."
+}

@@ -14,9 +14,17 @@ from rich.table import Table
 from stepfork.inspect.inspector import filter_timeline, inspect_bundle
 from stepfork.inspect.models import TraceInspection
 from stepfork.trace import TraceStorageError
+from stepfork.trace.redaction import redact_json
 
 console = Console()
 MAX_DETAIL_LENGTH = 180
+
+
+def _sanitize_text(value: str) -> str:
+    sanitized = redact_json(value).value
+    if isinstance(sanitized, str):
+        return sanitized
+    return str(sanitized)
 
 
 def inspect_command(
@@ -55,16 +63,17 @@ def inspect_command(
             step=step,
         )
     except TraceStorageError as exc:
+        message = _sanitize_text(str(exc))
         if json_output:
             _write_json(
                 {
                     "error": "unreadable_trace",
-                    "message": str(exc),
+                    "message": message,
                 }
             )
         else:
             console.print("[red]Unable to inspect trace.[/red]")
-            console.print(str(exc))
+            console.print(message)
         raise typer.Exit(2) from exc
 
     if step is not None and not inspection.timeline:

@@ -78,10 +78,10 @@ def generate_pytest_source(
     root = (import_root if import_root is not None else Path.cwd()).resolve()
 
     return TEMPLATE.format(
-        title=_trace_title(trace),
-        version=__version__,
-        trace_name=trace.name,
-        entrypoint=entrypoint,
+        title=_docstring_text(_trace_title(trace)),
+        version=_docstring_text(__version__),
+        trace_name=_docstring_text(trace.name),
+        entrypoint=_docstring_text(entrypoint),
         trace_expr=_path_expression(trace, output_path),
         import_root_expr=_path_expression(root, output_path),
         entrypoint_literal=repr(entrypoint),
@@ -148,6 +148,22 @@ def _path_expression(target: Path, output_path: Path) -> str:
 def _safe_stem(trace_path: Path) -> str:
     stem = re.sub(r"\W+", "_", trace_path.stem).strip("_")
     return stem
+
+
+def _docstring_text(value: str, *, limit: int = 200) -> str:
+    """Return text that is safe to embed inside a triple-quoted docstring.
+
+    Trace directory names and entrypoint specs are user- or attacker-supplied.
+    Interpolating them verbatim lets a triple double-quote or backslash
+    sequence terminate the module docstring early and turn the remainder into
+    code. Collapse whitespace, neutralize quotes and backslashes, and bound
+    the length.
+    """
+    collapsed = " ".join(value.split())
+    escaped = collapsed.replace("\\", "\\\\").replace('"', '\\"')
+    if len(escaped) > limit:
+        escaped = escaped[: limit - 1] + "…"
+    return escaped
 
 
 def _trace_title(trace_path: Path) -> str:
