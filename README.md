@@ -84,7 +84,7 @@ The `--pre` flag is required while Stepfork is a pre-release. You can also
 install from the tagged GitHub repository:
 
 ```bash
-pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a2"
+pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a3"
 ```
 
 Requires Python 3.11, 3.12, or 3.13. This installs the `stepfork` CLI and the
