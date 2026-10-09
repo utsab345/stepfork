@@ -17,7 +17,7 @@
   <a href="https://github.com/utsab345/stepfork/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/utsab345/stepfork/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://utsab345.github.io/stepfork/"><img alt="Docs" src="https://github.com/utsab345/stepfork/actions/workflows/docs.yml/badge.svg"></a>
   <a href="https://www.apache.org/licenses/LICENSE-2.0"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg"></a>
-  <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-blue.svg">
+  <img alt="Python 3.11-3.13" src="https://img.shields.io/badge/Python-3.11--3.13-blue.svg">
 </p>
 
 <p align="center">
@@ -84,11 +84,13 @@ The `--pre` flag is required while Stepfork is a pre-release. You can also
 install from the tagged GitHub repository:
 
 ```bash
-pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a3"
+pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a4"
 ```
 
 Requires Python 3.11, 3.12, or 3.13. This installs the `stepfork` CLI and the
 Python package. For contributors working from a checkout, use `uv sync`.
+Optional adapters are installed on demand, for example
+`pip install "stepfork[openai]"` or `pip install "stepfork[langgraph]"`.
 
 ## Five-minute quickstart
 
@@ -209,7 +211,7 @@ minimal example agent:
 
 ![Stepfork terminal demo](scripts/terminal-demo/stepfork-demo.gif)
 
-Four runnable demo agents ship in this repository (all fully offline, with a
+Five runnable demo agents ship in this repository (all fully offline, with a
 fake provider standing in for a real model):
 
 - `examples/quickstart` - a single-tool order-notification agent; the minimal
@@ -220,6 +222,8 @@ fake provider standing in for a real model):
   refund-policy-check tool; denies an eligible refund.
 - `examples/openai_chat` - the optional OpenAI adapter exercised through a
   fake OpenAI-shaped sync client; no API key or network call required.
+- `examples/langgraph_agent` - a real LangGraph `StateGraph` traced through the
+  optional LangGraph adapter; makes a wrong refund decision.
 
 ```bash
 git clone https://github.com/utsab345/stepfork.git
@@ -229,10 +233,11 @@ uv run python examples/quickstart/demo.py
 uv run python examples/booking_agent/demo.py
 uv run python examples/refund_agent/demo.py
 uv run python examples/openai_chat/demo.py
+uv run python examples/langgraph_agent/demo.py
 ```
 
 Each demo records the buggy run, freeze-replays it without touching the
-external tool body, diffs it against the corrected run, and exports a
+external dependency body, diffs it against the corrected run, and exports a
 regression test that fails on the buggy entrypoint and passes on the fixed one.
 The demos print real results from real subprocesses; they never fabricate
 output.
@@ -287,6 +292,7 @@ sources live in `docs/`.
 - [Behavioral diff](docs/diff.md)
 - [pytest export](docs/pytest-export.md)
 - [OpenAI Python SDK adapter](docs/openai.md)
+- [LangGraph adapter](docs/langgraph.md)
 - [CLI reference](docs/cli.md)
 - [Trace format](docs/trace-format.md)
 - [Security notes](docs/security.md)
@@ -309,8 +315,9 @@ before v1.0.
 - **No automatic failure minimization.** The exported regression test uses the
   recorded steps. Reducing it to the smallest failing subset and fork-at-step
   are planned work, not automatic behavior.
-- **Limited integrations.** The optional OpenAI Python SDK adapter supports
-  synchronous, non-streaming `chat.completions.create`. LangGraph, OpenAI
+- **Limited integrations.** Optional adapters cover the OpenAI Python SDK
+  (synchronous, non-streaming `chat.completions.create`) and LangGraph
+  (synchronous `BaseChatModel` generation and function-based tools). OpenAI
   Agents, MCP, streaming, async, and other providers are planned work. See
   [docs/integrations.md](docs/integrations.md).
 - **Replay is not a sandbox.** Running an entrypoint under replay executes

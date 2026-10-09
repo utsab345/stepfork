@@ -94,7 +94,13 @@ def _call_chat_completions(client: Any, request: dict[str, Any]) -> JsonObject:
         ) from exc
 
     response = create(**request)
-    payload = _json_payload(response)
+    try:
+        payload = _json_payload(response)
+    except TraceSerializationError as exc:
+        raise OpenAIIntegrationError(
+            "OpenAI chat completion response must be JSON-compatible for "
+            "Stepfork replay"
+        ) from exc
     if not isinstance(payload, dict):
         raise OpenAIIntegrationError(
             "OpenAI chat completion response must serialize to a JSON object"

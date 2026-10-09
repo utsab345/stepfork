@@ -3,7 +3,7 @@ name = "stepfork"
 dynamic = ["version"]
 description = "Behavioral regression testing for AI agents."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 license = { text = "Apache-2.0" }
 authors = [
     { name = "Utsab Dahal" }
@@ -40,6 +40,10 @@ dependencies = [
 openai = [
     "openai>=1.0",
 ]
+langgraph = [
+    "langchain-core>=1.0",
+    "langgraph>=1.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/utsab345/stepfork"
@@ -54,6 +58,8 @@ stepfork = "stepfork.cli.main:app"
 [dependency-groups]
 dev = [
     "hypothesis>=6.0",
+    "langchain-openai>=1.7.0",
+    "langgraph>=1.2.14",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.7.7",
     "mypy>=1.10",
@@ -74,6 +80,36 @@ path = "src/stepfork/version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/stepfork"]
+
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src",
+    "tests",
+    "examples",
+    "docs",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "mkdocs.yml",
+    "pyproject.toml",
+]
+exclude = [
+    "**/__pycache__",
+    "**/*.pyc",
+    "**/.artifacts",
+    "**/.artifacts/**",
+    "research_langgraph.py",
+    "test.sftrace",
+    "test.sftrace/**",
+    "llm_test.sftrace",
+    "llm_test.sftrace/**",
+    "dist",
+    "site",
+]
 
 
 [tool.pytest.ini_options]

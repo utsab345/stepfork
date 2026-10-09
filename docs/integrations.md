@@ -4,8 +4,10 @@ Stepfork's core is framework-independent by design. Recording and replay do
 not depend on LangGraph, OpenAI Agents, MCP, or any agent runtime. That keeps
 the core small, fast, and offline.
 
-One provider adapter is implemented today:
+Two adapters are implemented today:
 
+- [LangGraph](langgraph.md): synchronous `BaseChatModel` generation and
+  function-based tools, through explicit instance-scoped wrappers.
 - [OpenAI Python SDK](openai.md): synchronous, non-streaming
   `chat.completions.create` through an explicit wrapper.
 
@@ -26,15 +28,21 @@ This mirrors an adapter pattern with three layers:
   dependencies.
 - **Entry points:** a way to activate the right adapter for a given run.
 
-## Proposed Adapters
+## Adapters
 
 ### LangGraph
 
-- Record `StateGraph` executables via a wrapper or checkpointer hook that
-  emits a `tool_call`/`tool_result`/LLM events into a `Trace`.
-- Replay a graph node under frozen replay by returning recorded responses from
-  the surrounding tools/LLM.
-- Status: design only, not implemented.
+- Implemented for synchronous chat-model generation and function-based tools.
+  `traced_chat_model` wraps a `BaseChatModel` instance's `_generate`;
+  `traced_tool` wraps a function (or an existing `BaseTool` with a `func`) and
+  records its body. Both are explicit and instance-scoped; no global
+  monkeypatching.
+- Replay is frozen: the model and tool bodies are not executed, and recorded
+  responses are returned from the `Trace`.
+- Captures the model boundary and wrapped tools only. Async invocation,
+  streaming, and unwrapped dependencies are surfaced rather than masked.
+- Install with `stepfork[langgraph]`.
+- See [LangGraph](langgraph.md).
 
 ### OpenAI Agents SDK
 
@@ -62,10 +70,11 @@ This mirrors an adapter pattern with three layers:
 
 ### GitHub Actions
 
-- A `stepfork` action that runs `validate --verify-integrity` and, on demand,
-  a regression test, in CI. It builds on the existing CLI; it does not ship
-  special test tooling.
-- Status: design only, not implemented.
+- Implemented as an example workflow (`.github/workflows/agent-regression.yml`):
+  it installs the optional extra, runs committed `stepfork export` tests under
+  frozen replay, and configures no provider credentials. It builds on the
+  existing CLI and runtime; it ships no special test tooling.
+- Status: example implemented; a reusable published Action is future work.
 
 ## Constraints
 
