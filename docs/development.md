@@ -17,7 +17,7 @@ uv run pytest --cov=stepfork --cov-branch --cov-report=term-missing
 uv build
 ```
 
-The suite currently has 356 tests and ~93% branch coverage, including
+The suite currently has 361 tests and ~93% branch coverage, including
 Hypothesis property tests under `tests/property/`.
 
 Format changed files:
@@ -41,18 +41,46 @@ uv run stepfork export --help
 
 ## End-to-End Demos
 
-Two examples exercise the whole pipeline with real subprocesses and real exit
+Three examples exercise the whole pipeline with real subprocesses and real exit
 codes:
 
 ```bash
+uv run python examples/quickstart/demo.py
 uv run python examples/booking_agent/demo.py
 uv run python examples/refund_agent/demo.py
 ```
 
-`booking_agent` pairs a fake LLM provider with a flight-search tool;
-`refund_agent` pairs a fake LLM provider with a refund-policy-check tool.
-Both ship a buggy entrypoint that the demonstration converts into a failing
+`quickstart` is a single-tool order-notification agent and the minimal
+starting point. `booking_agent` pairs a fake LLM provider with a flight-search
+tool; `refund_agent` pairs a fake LLM provider with a refund-policy-check tool.
+Each ships a buggy entrypoint that the demonstration converts into a failing
 regression test and a fixed entrypoint that passes it.
+
+## Documentation Site
+
+The docs are built with [MkDocs](https://www.mkdocs.org/) and the
+[Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) theme. The
+source is `docs/` with `mkdocs.yml` at the repository root.
+
+Build and preview locally:
+
+```bash
+uv run mkdocs build --strict
+uv run mkdocs serve
+```
+
+The `.github/workflows/docs.yml` workflow builds the site (strict mode), uploads
+it, and deploys to GitHub Pages. Deployment uses the least-privileged Pages
+permissions: `contents: read`, `pages: write`, and `id-token: write`.
+
+One-time setup before the first deploy:
+
+1. Open repository Settings, then Pages.
+2. Under Build and deployment, set Source to GitHub Actions.
+
+The Pages URL is https://utsab345.github.io/stepfork/. Wait for the workflow
+to finish after enabling Pages; do not assume it deployed until the URL
+responds.
 
 ## Synthetic Traces
 

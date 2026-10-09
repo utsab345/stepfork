@@ -1,0 +1,43 @@
+site_name: Stepfork
+site_description: Local-first behavioral regression testing for AI agents. Turn a failed agent run into a reproducible pytest regression test.
+site_url: https://utsab345.github.io/stepfork/
+repo_url: https://github.com/utsab345/stepfork
+repo_name: stepfork
+
+theme:
+  name: material
+  logo: assets/stepfork-logo.png
+  favicon: assets/stepfork-logo.png
+  palette:
+    scheme: default
+  features:
+    - navigation.instant
+    - navigation.expand
+    - toc.integrate
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Concepts: concepts.md
+  - Examples: examples.md
+  - Guide:
+      - recording.md
+      - replay.md
+      - diff.md
+      - pytest-export.md
+      - trace-format.md
+  - Troubleshooting: troubleshooting.md
+  - Project:
+      - security.md
+      - architecture.md
+      - development.md
+      - release-checklist.md
+      - releases/v0.1.0a1.md
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+
+plugins:
+  - search

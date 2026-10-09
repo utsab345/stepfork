@@ -1,19 +1,20 @@
-# Getting Started
+# Stepfork
 
-Stepfork turns a failed AI-agent run into a reproducible pytest regression
-test. This page walks through the core workflow and points to the detailed
-docs for each step.
+Your agent failed. Make the failure a test.
 
-## Install
+Stepfork is a local-first, open source tool for behavioral regression testing
+of AI agents. It records what an agent actually did during a run (every
+external tool call, every LLM request, the final output), then turns the run
+into a deterministic pytest regression test that encodes the corrected
+behavior.
 
-```bash
-pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a1"
-```
+## The problem
 
-Requires Python 3.11, 3.12, or 3.13. See [the README](../README.md#installation)
-for alternatives, including `uv`.
+AI agents fail in ways unit tests miss. A flight-search agent books the wrong
+flight. A refund agent denies an eligible claim. When you diagnose such a
+failure you usually hand-write a fix and hope the regression is covered.
 
-## The core workflow
+## The Stepfork answer
 
 ```text
 failed agent run
@@ -29,37 +30,45 @@ behavioral diff
 pytest regression test
 ```
 
-1. [Record](recording.md) the failing run. Wrap the agent call in
-   `stepfork.record` and mark each external dependency with `@trace_tool`
-   (and, for LLM calls, `stepfork.llm_request`). The run is saved as a
-   `.sftrace` bundle, including when the block raises.
-2. [Replay](replay.md) the failure with frozen dependencies. Stepfork returns
-   the recorded responses instead of calling real services, so a replayed run
-   touches nothing external.
-3. Fix the agent, then [diff](diff.md) the recorded failure against a corrected
-   run to see exactly which behaviors changed.
-4. [Export](pytest-export.md) a pytest regression test from the recorded
-   failure. Supply the corrected output with `--expect-output`; the generated
-   test fails on the buggy code and passes on the fix.
+- **Record** a buggy run into a portable `.sftrace` bundle, including runs
+  that raise.
+- **Replay** it with dependencies frozen: responses come from the recording, so
+  no external service or tool body ever runs.
+- **Diff** the buggy behavior against a corrected run to see exactly what
+  changed.
+- **Export** a pytest regression test that fails on the buggy code and passes
+  on the fix.
 
-## 60-second example
+Nothing is sent to a remote service. Traces, diffing, replay, and test export
+all run locally.
 
-The minimal [quickstart agent](../examples/quickstart/README.md) shows the whole
-flow against a tiny order-notification agent. Run it with:
+## Key features
 
-```bash
-uv run python examples/quickstart/demo.py
-```
+- Typed `.sftrace` v0.1 trace format with canonical JSON persistence
+- Best-effort secret redaction
+- SHA-256 integrity verification
+- Frozen replay that never executes dependency bodies
+- Behavioral diffing across equivalent dependency calls
+- Executable pytest export with corrected expectations
+- Python 3.11, 3.12, and 3.13 support
 
-It records a buggy run, freeze-replays it, diffs it against a corrected run,
-and exports a regression test that fails on the buggy entrypoint and passes on
-the fixed one.
+## Get started
 
-## Where to go next
+Install, run a 60-second example, and learn the core workflow in the
+[Getting started](getting-started.md) guide. The [examples](examples.md)
+page walks through the three runnable demo agents in this repository.
 
-- [Trace format](trace-format.md): what a `.sftrace` bundle contains.
-- [Validating and inspecting](recording.md): integrity and local inspection.
-- [Security](security.md): redaction, integrity checks, and their limits.
-- [Architecture](architecture.md): how the pieces fit together.
-- [Development](development.md): build, test, and lint this repository.
-- [Release notes](releases/v0.1.0a1.md) and the [changelog](../CHANGELOG.md).
+## Explore
+
+- [Concepts](concepts.md) - the vocabulary you need.
+- [Recording](recording.md), [Replay](replay.md), [Diff](diff.md),
+  [pytest export](pytest-export.md) - how each feature works.
+- [Trace format](trace-format.md) - what a `.sftrace` bundle contains.
+- [Security](security.md) - redaction, integrity checks, and their limits.
+- [Troubleshooting](troubleshooting.md) - common errors and fixes.
+- [Architecture](architecture.md), [Development](development.md) - for
+  contributors.
+
+Stepfork is experimental. See the
+[changelog](https://github.com/utsab345/stepfork/blob/main/CHANGELOG.md) and
+the [v0.1.0a1 release notes](releases/v0.1.0a1.md) for what shipped.

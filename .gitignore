@@ -28,6 +28,10 @@ htmlcov/
 # Ruff
 .ruff_cache/
 
+# MkDocs build output
+site/
+.cache/
+
 # IDEs
 .vscode/
 .idea/
