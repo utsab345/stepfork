@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import random
 import sys
 import textwrap
@@ -191,7 +192,7 @@ def test_replay_cli_detects_untraced_random_output(
     _write_targets(tmp_path)
     monkeypatch.chdir(tmp_path)
     monkeypatch.syspath_prepend(str(tmp_path))
-    from targetpkg.targets import random_value
+    random_value = importlib.import_module("targetpkg.targets").random_value
 
     trace = tmp_path / "random.sftrace"
     monkeypatch.setattr(random, "random", lambda: 0.25)
@@ -280,7 +281,7 @@ def test_replay_cli_reproduces_recorded_dependency_failure(
     _write_targets(tmp_path)
     monkeypatch.chdir(tmp_path)
     monkeypatch.syspath_prepend(str(tmp_path))
-    from targetpkg.targets import call_failing_step
+    call_failing_step = importlib.import_module("targetpkg.targets").call_failing_step
 
     trace = tmp_path / "dependency_failure.sftrace"
     with (

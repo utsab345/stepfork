@@ -4,6 +4,33 @@ All notable changes to Stepfork are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.0a5] - 2026-10-09
+
+Replay correctness and developer trust fixes. No new integrations or trace
+format changes.
+
+### Fixed
+
+- The replay CLI now checks the recorded final output when one is present, so
+  untraced nondeterminism that changes that output exits with divergence rather
+  than reporting a successful behavioral replay.
+- A recorded dependency exception is classified as a reproduced failure when
+  its recorded error type matches.
+- Successful versus raising runs align their terminal run events in behavioral
+  diffs, avoiding duplicate run-level entries.
+- CLI replay diagnostics abbreviate fingerprints by default; `--verbose`
+  retains full values for detailed investigation.
+
+### Documentation
+
+- Replay reports distinguish execution, dependency matching, and final-output
+  equivalence, including the limits of redacted comparisons and untraced side
+  effects.
+- Exported pytest tests state their Stepfork, pytest, entrypoint, and trace
+  fixture requirements. Expected output remains a reviewed user decision.
+
+[0.1.0a5]: https://github.com/utsab345/stepfork/releases/tag/v0.1.0a5
+
 ## [0.1.0a4] - 2026-10-09
 
 Replay hardening plus the OpenAI SDK and LangGraph integration alpha.

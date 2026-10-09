@@ -17,7 +17,7 @@ uv run pytest --cov=stepfork --cov-branch --cov-report=term-missing
 uv build
 ```
 
-The suite currently has 365 tests and ~93% branch coverage, including
+The suite currently has 415 tests and 93% combined statement/branch coverage, including
 Hypothesis property tests under `tests/property/`.
 
 Format changed files:
@@ -41,20 +41,22 @@ uv run stepfork export --help
 
 ## End-to-End Demos
 
-Three examples exercise the whole pipeline with real subprocesses and real exit
+Five examples exercise the whole pipeline with real subprocesses and real exit
 codes:
 
 ```bash
 uv run python examples/quickstart/demo.py
 uv run python examples/booking_agent/demo.py
 uv run python examples/refund_agent/demo.py
+uv run python examples/openai_chat/demo.py
+uv run python examples/langgraph_agent/demo.py
 ```
 
 `quickstart` is a single-tool order-notification agent and the minimal
-starting point. `booking_agent` pairs a fake LLM provider with a flight-search
-tool; `refund_agent` pairs a fake LLM provider with a refund-policy-check tool.
-Each ships a buggy entrypoint that the demonstration converts into a failing
-regression test and a fixed entrypoint that passes it.
+starting point. `booking_agent` and `refund_agent` combine LLM and tool calls.
+`openai_chat` and `langgraph_agent` exercise the optional adapters. Each demo
+checks that the buggy entrypoint fails its generated regression test and the
+fixed entrypoint passes it.
 
 ## Documentation Site
 
