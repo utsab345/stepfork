@@ -83,10 +83,10 @@ The trusted-publishing workflow is committed at
 [`.github/workflows/publish.yml`](https://github.com/utsab345/stepfork/blob/main/.github/workflows/publish.yml).
 It:
 
-- runs only on `release: published` or `workflow_dispatch` (never on pushes or
-  pull requests);
+- runs only when a GitHub Release is published (never on pushes, pull requests,
+  or manual dispatch);
 - builds the sdist and wheel, runs `twine check`, and verifies that
-  `src/stepfork/version.py` matches the release tag;
+  `src/stepfork/version.py` matches the release tag exactly;
 - publishes from a job bound to the `pypi` environment with `id-token: write`,
   using `pypa/gh-action-pypi-publish`, so no API token is stored.
 
@@ -96,8 +96,8 @@ reviewers to that environment if you want a human to approve each publish.
 ## 6. Publish and verify
 
 - [ ] Tag the release commit (`git tag v<version>`) and push the tag.
-- [ ] Create the GitHub Release with the built artifacts.
-- [ ] Run the publish workflow (or let it run from the release event).
+- [ ] Create the GitHub Release with the built artifacts. Publishing the
+      release triggers the trusted publish workflow; there is no manual trigger.
 - [ ] Confirm the wheel and sdist appear on the PyPI project page.
 - [ ] In a brand-new venv:
       `pip install --pre stepfork` (pre-release requires `--pre` until a final

@@ -1,8 +1,12 @@
 name: Publish
 
 # Publishes to PyPI using trusted publishing (OIDC). No API token is stored.
-# This workflow only runs when a GitHub Release is published, or when a
-# maintainer manually dispatches it. It does not run on pushes or pull requests.
+#
+# This workflow runs ONLY when a GitHub Release is published. It has no
+# workflow_dispatch trigger and never runs on pushes or pull requests, so
+# untrusted code cannot reach the publishing credentials. The release tag must
+# match the version in src/stepfork/version.py exactly, or the build job fails
+# before the publish job starts.
 #
 # Prerequisites before the first publish (see docs/pypi-publishing.md):
 #   - a PyPI pending/trusted publisher for owner `utsab345`, repo `stepfork`,
@@ -12,7 +16,6 @@ name: Publish
 on:
   release:
     types: [published]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -35,10 +38,13 @@ jobs:
         run: uvx twine check dist/*
 
       - name: Verify version matches release tag
-        if: github.event_name == 'release'
         run: |
-          version=$(python3 -c "import pathlib,re; print(re.search(r'__version__\s*=\s*\"([^\"]+)\"', pathlib.Path('src/stepfork/version.py').read_text()).group(1))")
+          version=$(python3 -c "import pathlib,re; print(re.search(r'__version__\\s*=\\s*\"([^\"]+)\"', pathlib.Path('src/stepfork/version.py').read_text()).group(1))")
           tag="${GITHUB_REF_NAME#v}"
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
+            echo "publish must run from a tag ref, got ${GITHUB_REF_TYPE}" >&2
+            exit 1
+          fi
           if [ "$version" != "$tag" ]; then
             echo "version.py ($version) does not match release tag ($tag)" >&2
             exit 1
