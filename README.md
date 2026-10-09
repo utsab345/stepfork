@@ -31,21 +31,43 @@ fork-at-step, and framework integrations remain planned work.
 
 ## Installation
 
-For local development:
+Stepfork is not published to PyPI for this alpha release. Install directly from
+the public GitHub repository:
 
 ```bash
-uv sync
+# pip
+pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a1"
+
+# uv
+uv pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a1"
 ```
 
-Two fully offline example agents are included; run either demo from the
-repository root to watch a buggy agent become a failing regression test:
+Python 3.11, 3.12, or 3.13 is required. This installs the `stepfork` CLI and
+Python package.
+
+For contributors working from a checkout, use `uv sync` from the repository
+root instead.
+
+### Try the demos
 
 ```bash
+git clone https://github.com/utsab345/stepfork.git
+cd stepfork
+uv sync
 uv run python examples/booking_agent/demo.py
 uv run python examples/refund_agent/demo.py
 ```
 
+Both demos are fully offline: a fake LLM provider inside the example stands in
+for a real model, so no API keys or network access are needed.
+
 ## Quickstart
+
+The example below is a conceptual sketch: the tool and LLM boundaries you need
+to instrument (`flights_api`, `client`, `messages`, and `run_agent` come from
+your own application). See the runnable [Booking Agent demo](#try-the-demos
+) and [Refund Agent demo](#try-the-demos) for a complete, self-contained
+version.
 
 Record an agent run and assert the behavior you expect after the fix:
 
@@ -115,9 +137,11 @@ stepfork export demo.sftrace --pytest --entrypoint pkg.module:func
 - [pytest export](docs/pytest-export.md)
 - [Trace format](docs/trace-format.md)
 - [Security notes](docs/security.md)
+- [Security policy](SECURITY.md)
 - [Architecture](docs/architecture.md)
 - [Development](docs/development.md)
 - [Release checklist](docs/release-checklist.md)
+- [v0.1.0a1 release notes](docs/releases/v0.1.0a1.md)
 - [Changelog](CHANGELOG.md)
 
 ## Offline Trace API

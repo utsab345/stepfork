@@ -19,8 +19,16 @@ Prepared for first public alpha.
 - Expanded unit coverage for storage, diffing, JSON encoding, runtime replay
   planning, and export runtime error paths.
 - `CHANGELOG.md`, `docs/release-checklist.md`.
+- Top-level `SECURITY.md` documenting the security model and a private
+  vulnerability-reporting path.
+- `docs/releases/v0.1.0a1.md` with the public release notes.
 
 ### Changed
+
+- README documents installing directly from the public GitHub repository via
+  `pip`/`uv` (`git+https://...@v0.1.0a1`); PyPI install is not offered for the
+  alpha. The conceptual quickstart is labeled as a sketch and links to the
+  runnable demos.
 
 - Version is now a single source of truth via hatchling dynamic versioning
   (`[tool.hatch.version] path = "src/stepfork/version.py"`); bumped to
