@@ -7,7 +7,8 @@ package on its own.
 
 Current status: **published.** `0.1.0a3` is the latest release on PyPI
 (`0.1.0a2` was the first, uploaded 2026-10-09) and `pip install --pre stepfork`
-resolves to it. Subsequent releases follow the same procedure below.
+resolves to it. `0.1.0a4` is the next prepared release. Subsequent releases
+follow the same procedure below.
 
 ## 0. Preconditions
 
@@ -37,7 +38,7 @@ resolves to it. Subsequent releases follow the same procedure below.
 - [ ] The wheel contains `stepfork/py.typed`, the CLI entry point
       (`stepfork = stepfork.cli.main:app`), `METADATA`, `LICENSE`, and `WHEEL`.
 - [ ] `Requires-Python` and classifiers match reality
-      (`>=3.11`; classifiers for 3.11, 3.12, 3.13).
+      (`>=3.11,<3.14`; classifiers for 3.11, 3.12, 3.13).
 - [ ] Runtime dependencies are correct and minimal
       (`pydantic>=2.0`, `rich>=13.0`, `typer>=0.12`).
 - [ ] `README.md` renders as the long description

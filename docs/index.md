@@ -15,6 +15,8 @@ failure you usually hand-write a fix and hope the regression is covered.
 
 ## The Stepfork answer
 
+![Stepfork workflow: instrument, record, inspect, validate, frozen replay, compare, export a pytest test, and verify the fix](assets/stepfork-workflow.png)
+
 ```text
 failed agent run
       ↓
@@ -55,7 +57,7 @@ all run locally.
 
 Stepfork is on PyPI: `pip install --pre stepfork`. Then run a 60-second example
 and learn the core workflow in the [Getting started](getting-started.md) guide.
-The [examples](examples.md) page walks through the three runnable demo agents
+The [examples](examples.md) page walks through the five runnable demo agents
 in this repository.
 
 ## Explore
@@ -71,4 +73,4 @@ in this repository.
 
 Stepfork is experimental. See the
 [changelog](https://github.com/utsab345/stepfork/blob/main/CHANGELOG.md) and
-the [v0.1.0a3 release notes](releases/v0.1.0a3.md) for what shipped.
+the [v0.1.0a4 release notes](releases/v0.1.0a4.md) for what shipped.

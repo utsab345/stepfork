@@ -256,7 +256,7 @@ def _build_llm_call(
             policy=request.replay_policy,
             status=EventStatus.ERROR,
             output=None,
-            output_hash=error.output_hash,
+            output_hash=None,
             error_type=error.error_type,
             error_message=error.message,
             missing=False,

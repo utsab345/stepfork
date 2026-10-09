@@ -11,7 +11,11 @@ from stepfork.integrations.openai import (
     OpenAIIntegrationError,
     chat_completions_create,
 )
-from stepfork.replay import ReplayExhaustedError, ReplayMismatchError
+from stepfork.replay import (
+    RecordedDependencyError,
+    ReplayExhaustedError,
+    ReplayMismatchError,
+)
 from stepfork.trace import EventType, RunEnd, RunStart, RunStatus
 
 
@@ -41,13 +45,46 @@ class FakeChatCompletion:
         }
 
 
+class NonJsonCompletion:
+    def model_dump(self, *, mode: str = "python") -> dict[str, Any]:
+        assert mode == "json"
+        return {"choices": [{"message": {"content": object()}}]}
+
+
+class ToDictCompletion:
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": "chatcmpl_dict",
+            "object": "chat.completion",
+            "model": "gpt-test",
+            "choices": [
+                {
+                    "message": {"role": "assistant", "content": "dict response"},
+                }
+            ],
+        }
+
+
 class FakeCompletions:
-    def __init__(self, calls: list[dict[str, Any]], *, content: str) -> None:
+    def __init__(
+        self,
+        calls: list[dict[str, Any]],
+        *,
+        content: str,
+        response: Any | None = None,
+        exc: BaseException | None = None,
+    ) -> None:
         self._calls = calls
         self._content = content
+        self._response = response
+        self._exc = exc
 
-    def create(self, **request: Any) -> FakeChatCompletion:
+    def create(self, **request: Any) -> Any:
         self._calls.append(dict(request))
+        if self._exc is not None:
+            raise self._exc
+        if self._response is not None:
+            return self._response
         return FakeChatCompletion(
             content=self._content,
             model=str(request.get("model", "gpt-test")),
@@ -55,14 +92,37 @@ class FakeCompletions:
 
 
 class FakeChat:
-    def __init__(self, calls: list[dict[str, Any]], *, content: str) -> None:
-        self.completions = FakeCompletions(calls, content=content)
+    def __init__(
+        self,
+        calls: list[dict[str, Any]],
+        *,
+        content: str,
+        response: Any | None = None,
+        exc: BaseException | None = None,
+    ) -> None:
+        self.completions = FakeCompletions(
+            calls,
+            content=content,
+            response=response,
+            exc=exc,
+        )
 
 
 class FakeOpenAI:
-    def __init__(self, *, content: str = "approved") -> None:
+    def __init__(
+        self,
+        *,
+        content: str = "approved",
+        response: Any | None = None,
+        exc: BaseException | None = None,
+    ) -> None:
         self.calls: list[dict[str, Any]] = []
-        self.chat = FakeChat(self.calls, content=content)
+        self.chat = FakeChat(
+            self.calls,
+            content=content,
+            response=response,
+            exc=exc,
+        )
 
 
 def _request(**overrides: Any) -> dict[str, Any]:
@@ -133,6 +193,19 @@ def test_frozen_replay_detects_changed_request_parameter(tmp_path: Path) -> None
         _call(FakeOpenAI(), temperature=1)
 
 
+def test_frozen_replay_detects_changed_prompt(tmp_path: Path) -> None:
+    trace_path = tmp_path / "openai.sftrace"
+    client = FakeOpenAI()
+    with record("openai-agent", output=trace_path):
+        _call(client, messages=[{"role": "user", "content": "first prompt"}])
+
+    with (
+        ReplaySession.from_trace(trace_path, mode="frozen"),
+        pytest.raises(ReplayMismatchError, match="input diverged"),
+    ):
+        _call(FakeOpenAI(), messages=[{"role": "user", "content": "changed prompt"}])
+
+
 def test_frozen_replay_detects_changed_model(tmp_path: Path) -> None:
     trace_path = tmp_path / "openai.sftrace"
     client = FakeOpenAI()
@@ -174,6 +247,59 @@ def test_non_json_request_parameters_are_rejected_before_sdk_call() -> None:
         _call(client, metadata={"not_json": object()})
 
     assert client.calls == []
+
+
+def test_non_json_response_is_reported_as_integration_error() -> None:
+    client = FakeOpenAI(response=NonJsonCompletion())
+
+    with pytest.raises(OpenAIIntegrationError, match="response"):
+        _call(client)
+
+    assert len(client.calls) == 1
+
+
+def test_non_object_response_is_reported_as_integration_error() -> None:
+    client = FakeOpenAI(response=["not", "an", "object"])
+
+    with pytest.raises(OpenAIIntegrationError, match="JSON object"):
+        _call(client)
+
+    assert len(client.calls) == 1
+
+
+def test_to_dict_response_objects_are_supported() -> None:
+    client = FakeOpenAI(response=ToDictCompletion())
+
+    result = _call(client)
+
+    assert result["choices"][0]["message"]["content"] == "dict response"
+
+
+def test_missing_chat_completions_create_is_reported() -> None:
+    class MissingChat:
+        pass
+
+    with pytest.raises(OpenAIIntegrationError, match=r"chat\.completions\.create"):
+        chat_completions_create(MissingChat(), **_request())
+
+
+def test_sdk_exception_is_recorded_and_replayed(tmp_path: Path) -> None:
+    trace_path = tmp_path / "openai-error.sftrace"
+    client = FakeOpenAI(exc=RuntimeError("provider down"))
+
+    with (
+        pytest.raises(RuntimeError, match="provider down"),
+        record("openai-agent", output=trace_path),
+    ):
+        _call(client)
+
+    replay_client = FakeOpenAI(content="should not run")
+    with (
+        ReplaySession.from_trace(trace_path, mode="frozen"),
+        pytest.raises(RecordedDependencyError, match="provider down"),
+    ):
+        _call(replay_client)
+    assert replay_client.calls == []
 
 
 def test_model_is_required() -> None:

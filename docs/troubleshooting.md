@@ -117,6 +117,26 @@ The generated pytest test produces standard `AssertionError` lines:
 - `ReplaySession is not active; enter it with 'with ...' before running the
   agent` - run the agent inside the `with` block.
 
+## LangGraph
+
+- `ModuleNotFoundError: The Stepfork LangGraph integration requires the
+  optional 'langgraph' extra` - install it with
+  `pip install "stepfork[langgraph]"`. The core package does not depend on
+  LangGraph.
+- `LangGraphIntegrationError: ... supports synchronous invocation only` - the
+  agent called `ainvoke` inside a `record(...)` or replay context. Use the
+  synchronous graph API, or keep the async path out of the recorded entrypoint.
+- `ReplayMismatchError: ... input diverged from the recording` on a model call
+  usually means the prompt, the message history, or the tool schemas exposed to
+  the model changed. The message `id` field is stripped before hashing, so
+  random identifiers are not the cause.
+- `cannot trace tool '...': it does not expose a Python function` - wrap the
+  underlying function with `@traced_tool`, or pass a `BaseTool` created from a
+  function.
+- `LangGraph boundary payloads must be JSON-compatible` - a tool or model
+  payload is not JSON-serializable. Pass `serializer=` to `traced_tool`, or
+  keep non-JSON values out of the traced boundary.
+
 ## Serialization
 
 - `non-finite float at {path} cannot be recorded as JSON` - `NaN` and

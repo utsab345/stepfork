@@ -55,6 +55,7 @@ Thumbs.db
 examples/booking_agent/.artifacts/
 examples/refund_agent/.artifacts/
 examples/openai_chat/.artifacts/
+examples/langgraph_agent/.artifacts/
 
 # Quickstart demo artifacts
 examples/quickstart/.artifacts/

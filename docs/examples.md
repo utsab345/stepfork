@@ -1,6 +1,6 @@
 # Examples
 
-Four runnable, fully offline example agents ship in this repository. No API
+Five runnable, fully offline example agents ship in this repository. No API
 keys, no network access: each uses a fake provider that stands in for a real
 model or service, so the demos are deterministic and repeatable.
 
@@ -66,13 +66,31 @@ buggy sentiment decision.
 uv run python examples/openai_chat/demo.py
 ```
 
+## LangGraph agent
+
+`examples/langgraph_agent` builds a real LangGraph `StateGraph` around a refund
+triage decision and wires it to Stepfork through the optional
+`stepfork.integrations.langgraph` adapter. The buggy node inverts the refund
+eligibility comparison. The demo records the buggy run, freezes and replays it
+with zero model and tool executions, diffs it against the corrected run, and
+proves the exported regression test fails for the buggy agent and passes for
+the fixed one.
+
+```bash
+uv run python examples/langgraph_agent/demo.py
+```
+
+See
+[the LangGraph guide](https://github.com/utsab345/stepfork/blob/main/docs/langgraph.md)
+and the example README for details.
+
 ## What every demo proves
 
-All four demos end with the same assertions:
+All five demos end with the same assertions:
 
 - the buggy implementation FAILS the generated regression test,
 - the corrected implementation PASSES the same test,
-- frozen replay never executed any external tool body.
+- frozen replay never executed any external dependency call.
 
 The demos print real results from real subprocesses; they never fabricate
 output.
