@@ -35,6 +35,18 @@ def test_readme_references_existing_terminal_demo() -> None:
 
 def test_new_docs_pages_exist_and_are_navigable() -> None:
     nav = MKDOCS.read_text(encoding="utf-8")
-    for page in ("cli.md", "integrations.md"):
+    for page in (
+        "cli.md",
+        "integrations.md",
+        "pypi-publishing.md",
+        "community/early-adopter-guide.md",
+    ):
         assert (REPO_ROOT / "docs" / page).is_file(), page
         assert page in nav, f"{page} missing from mkdocs nav"
+
+
+def test_readme_does_not_claim_automatic_minimization() -> None:
+    text = README.read_text(encoding="utf-8")
+    lowered = text.lower()
+    assert "smallest reproducible" not in lowered
+    assert "no automatic failure minimization" in lowered
