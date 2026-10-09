@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/stepfork-logo.png" alt="Stepfork logo" width="220">
+  <img src="https://raw.githubusercontent.com/utsab345/stepfork/main/assets/stepfork-logo.png" alt="Stepfork logo" width="220">
 </p>
 
 <h1 align="center">Stepfork</h1>
@@ -18,6 +18,10 @@
   <a href="https://utsab345.github.io/stepfork/"><img alt="Docs" src="https://github.com/utsab345/stepfork/actions/workflows/docs.yml/badge.svg"></a>
   <a href="https://www.apache.org/licenses/LICENSE-2.0"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-blue.svg">
+</p>
+
+<p align="center">
+  Install the alpha: <code>pip install --pre stepfork</code>
 </p>
 
 Product goal:
