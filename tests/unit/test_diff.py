@@ -133,6 +133,9 @@ def test_error_difference_is_detected(tmp_path: Path) -> None:
     assert any(
         change.path == "status" for step in result.steps for change in step.changes
     )
+    run_steps = [step for step in result.steps if step.step_type == "run"]
+    assert len(run_steps) == 1
+    assert [change.path for change in run_steps[0].changes] == ["run_status"]
 
 
 def test_diff_output_is_secret_safe(tmp_path: Path) -> None:

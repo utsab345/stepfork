@@ -26,6 +26,9 @@ Regenerate with the same `stepfork export` command plus `--overwrite`.
 This test replays a recorded trace against the trusted local entrypoint named
 in ENTRYPOINT and asserts the behavior recorded in EXPECTATION. Stepfork never
 executes code embedded in a trace bundle.
+
+To run it, install pytest and Stepfork in the test environment, keep the
+referenced .sftrace bundle at TRACE_PATH, and make ENTRYPOINT importable.
 """
 
 from __future__ import annotations

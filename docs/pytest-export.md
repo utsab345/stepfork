@@ -1,6 +1,6 @@
 # pytest Export
 
-`stepfork export` turns a trace into a standalone pytest regression test that
+`stepfork export` turns a trace into an executable pytest regression test that
 replays a trusted entrypoint and asserts the expected behavior.
 
 ## The key idea: the recorded failure is not the expectation
@@ -28,6 +28,14 @@ Without `--expect-output`, Stepfork warns that the test asserts the recorded run
 output and that it will pass against the code that produced the recording. It is
 useful for replay-fidelity checks, not for regression testing.
 
+Review the desired JSON output before export. One practical workflow is to copy
+the recorded result into a separate `expected.json`, edit the fields that define
+the fix, review the file in code review, then pass it with `--expect-output`.
+Do not treat the recorded result or the first output from changed code as an
+approved oracle automatically. A future assisted workflow could prepare a
+draft expected-output file for review, but it should require an explicit user
+approval before exporting a regression assertion.
+
 ## Options
 
 - `--pytest` / `--no-pytest`: only `pytest` is supported in v0.1.
@@ -39,6 +47,13 @@ useful for replay-fidelity checks, not for regression testing.
 - `--mode`: replay mode used by the generated test (`frozen` recommended).
 
 The trace must pass strict validation before export.
+
+Running the generated file requires `pytest`, an installed `stepfork` package,
+an importable trusted entrypoint and its dependencies, and the referenced
+`.sftrace` directory. The generated test refers to the bundle by path; it does
+not embed or copy the fixture. If moving the test to another project or CI,
+copy the bundle with it and verify `TRACE_PATH` resolves there. These are test
+environment requirements; `pytest` is not a Stepfork runtime dependency.
 
 ## Generated test
 

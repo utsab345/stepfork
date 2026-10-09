@@ -183,6 +183,7 @@ Options:
 |---|---|
 | `--entrypoint <str>` | Trusted local `MODULE:FUNCTION` to execute under replay. Required. |
 | `--mode <str>` | Replay mode: `frozen`, `live`, `forbidden`, or `manual`. Default `frozen`. |
+| `--verbose` | Show full diagnostic fingerprints instead of abbreviated ones. |
 | `--help` | Show command help and exit. |
 
 Modes:
@@ -210,7 +211,10 @@ Mode          frozen
 
 Dependency Calls
   1. tool order_status (substituted)
+Dependency matching: COMPLETE
 
+Execution: COMPLETED
+Recorded behavior: MATCHED
 Status: COMPLETED
 Final result: {"order_id":"ORD-1001","should_notify":false}
 ```

@@ -50,7 +50,19 @@ def diff_traces(
 
     baseline_steps = extract_behavior(baseline_trace)
     candidate_steps = extract_behavior(candidate_trace)
-    steps = _diff_steps(baseline_steps, candidate_steps)
+    # The terminal run event describes the whole run. Align it with the other
+    # terminal run event even when one side inserted an error event before it.
+    if (
+        baseline_steps
+        and candidate_steps
+        and baseline_steps[-1].step_type == "run"
+        and candidate_steps[-1].step_type == "run"
+    ):
+        steps = _diff_steps(baseline_steps[:-1], candidate_steps[:-1])
+        run_diff = _diff_steps(baseline_steps[-1:], candidate_steps[-1:])[0]
+        steps.append(run_diff.model_copy(update={"index": len(steps)}))
+    else:
+        steps = _diff_steps(baseline_steps, candidate_steps)
 
     added = sum(step.kind == "added" for step in steps)
     removed = sum(step.kind == "removed" for step in steps)

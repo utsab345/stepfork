@@ -65,3 +65,21 @@ def test_diff_cli_invalid_input_exits_two(tmp_path: Path) -> None:
     )
 
     assert result.exit_code == 2
+
+
+def test_diff_cli_aligns_run_after_error(tmp_path: Path) -> None:
+    baseline = tmp_path / "good.sftrace"
+    candidate = tmp_path / "error.sftrace"
+    with record("demo-agent", output=baseline) as session:
+        session.set_output({"ok": True})
+    try:
+        with record("demo-agent", output=candidate):
+            raise ValueError("boom")
+    except ValueError:
+        pass
+
+    result = runner.invoke(app, ["diff", str(baseline), str(candidate)])
+
+    assert result.exit_code == 1
+    assert result.stdout.count("run: run") == 1
+    assert "run_status:" in result.stdout

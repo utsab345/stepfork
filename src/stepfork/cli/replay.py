@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -9,13 +10,14 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from stepfork.diff.compare import first_difference
 from stepfork.export.entrypoint import EntrypointError, resolve_entrypoint
 from stepfork.replay import (
     RecordedDependencyError,
     ReplayError,
     ReplaySession,
 )
-from stepfork.trace import RunStatus, Trace, TraceStorageError
+from stepfork.trace import RunEnd, RunStatus, Trace, TraceStorageError
 from stepfork.trace.canonical import canonical_json_bytes
 from stepfork.trace.jsonable import TraceSerializationError, to_json_value
 from stepfork.trace.redaction import redact_json
@@ -23,6 +25,7 @@ from stepfork.trace.replay_policy import ReplayPolicy
 
 console = Console()
 PREVIEW_LIMIT = 400
+FINGERPRINT_RE = re.compile(r"\b[a-f0-9]{64}\b")
 
 
 def replay_command(
@@ -50,6 +53,10 @@ def replay_command(
             help="Replay mode: frozen, live, forbidden, manual, or derived.",
         ),
     ] = "frozen",
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", help="Show full replay fingerprints."),
+    ] = False,
 ) -> None:
     """Execute a trusted entrypoint with dependencies replayed from a trace.
 
@@ -84,6 +91,8 @@ def replay_command(
         with ReplaySession.from_trace(trace, mode=mode) as replay:
             try:
                 result_value = entry()
+            except RecordedDependencyError as exc:
+                agent_exc = exc
             except ReplayError as exc:
                 divergence = _sanitize_text(str(exc))
             except Exception as exc:
@@ -97,9 +106,10 @@ def replay_command(
             remaining = replay.pending
     except ReplayError as exc:
         console.print("[red]Replay failed before execution.[/red]")
-        console.print(_sanitize_text(str(exc)))
+        console.print(_diagnostic(str(exc), verbose=verbose))
         raise typer.Exit(1) from exc
 
+    dependency_diverged = divergence is not None
     status = "completed"
     if divergence is None and agent_exc is not None:
         failure_type = trace.failure.type if trace.failure else None
@@ -126,6 +136,37 @@ def replay_command(
                 "without raising"
             )
 
+    behavior = "NOT RECORDED"
+    if divergence is None and status == "reproduced_failure":
+        behavior = "FAILURE TYPE MATCHED"
+    elif divergence is None and agent_exc is None:
+        recorded_end = next(
+            (event for event in reversed(trace.events) if isinstance(event, RunEnd)),
+            None,
+        )
+        if recorded_end is not None and recorded_end.output is not None:
+            try:
+                actual = redact_json(to_json_value(result_value)).value
+            except TraceSerializationError:
+                behavior = "UNVERIFIABLE"
+                divergence = (
+                    "entrypoint returned a value that cannot be compared as JSON"
+                )
+            else:
+                difference = first_difference(recorded_end.output, actual)
+                if difference is None:
+                    behavior = "MATCHED"
+                else:
+                    behavior = "DIFFERENT"
+                    field, expected, observed = difference
+                    divergence = (
+                        f"final result differs from recorded output at {field!r}: "
+                        f"recorded {_result_preview(expected)}, "
+                        f"actual {_result_preview(observed)}. "
+                        "Possible causes include untraced nondeterminism or "
+                        "changed local logic."
+                    )
+
     _print_report(
         trace=trace,
         path=path,
@@ -137,6 +178,9 @@ def replay_command(
         divergence=divergence,
         result_value=result_value,
         agent_exc=agent_exc,
+        behavior=behavior,
+        verbose=verbose,
+        dependency_diverged=dependency_diverged,
     )
 
     raise typer.Exit(1 if divergence is not None else 0)
@@ -154,6 +198,9 @@ def _print_report(
     divergence: str | None,
     result_value: Any,
     agent_exc: BaseException | None,
+    behavior: str,
+    verbose: bool,
+    dependency_diverged: bool,
 ) -> None:
     console.print("[bold]Stepfork Replay[/bold]")
     console.print()
@@ -179,11 +226,23 @@ def _print_report(
             )
     if remaining:
         console.print(f"  [yellow]{remaining} recorded call(s) unmatched[/yellow]")
+    console.print(
+        f"Dependency matching: {'DIVERGED' if dependency_diverged else 'COMPLETE'}"
+    )
     console.print()
+
+    if agent_exc:
+        execution = "RAISED"
+    elif dependency_diverged:
+        execution = "INTERRUPTED"
+    else:
+        execution = "COMPLETED"
+    console.print(f"Execution: {execution}")
+    console.print(f"Recorded behavior: {behavior}")
 
     if divergence is not None:
         console.print("Status: [red]DIVERGED[/red]")
-        console.print(_sanitize_text(divergence))
+        console.print(_diagnostic(divergence, verbose=verbose))
         console.print()
         return
 
@@ -219,3 +278,10 @@ def _sanitize_text(value: str) -> str:
     if isinstance(sanitized, str):
         return sanitized
     return str(sanitized)
+
+
+def _diagnostic(value: str, *, verbose: bool) -> str:
+    sanitized = _sanitize_text(value)
+    if verbose:
+        return sanitized
+    return FINGERPRINT_RE.sub(lambda match: f"{match.group()[:12]}…", sanitized)

@@ -18,7 +18,7 @@ with ReplaySession.from_trace("failure.sftrace", mode="frozen") as replay:
 bundle or an in-memory `Trace`. The active session is available process-wide, so
 instrumented tools and `llm_request` calls inside `run_agent()` observe it.
 
-`verify_complete()` raises `ReplayExhaustedError` if recorded dependency calls
+`verify_complete()` raises `ReplayMismatchError` if recorded dependency calls
 were left unmatched, which catches agents that skip a recorded step.
 
 ## Matching guarantees
@@ -75,7 +75,8 @@ matching because those modes require explicit policy handling.
   `verify_complete()` found unmatched calls.
 - `ReplayPolicyError`: the mode or per-call policy forbids execution.
 - `RecordedDependencyError`: a dependency that failed during recording is
-  re-raised during replay, preserving the original error type.
+  represented by a dedicated replay exception carrying the recorded error type
+  and sanitized message.
 - `ReplayError`: base class for all of the above.
 
 ## CLI
@@ -94,5 +95,20 @@ Exit codes:
 - `1`: the run diverged from the recording.
 - `2`: invalid mode, unreadable trace, or unresolvable entrypoint.
 
-The report lists each matched dependency call, any unmatched calls, the final
-result, and whether the recorded failure was reproduced.
+The report separates entrypoint execution, dependency-call matching, and the
+comparison with the recorded run output. A completed entrypoint with all calls
+matched can still return a different value; the CLI reports `DIVERGED` and exits
+`1` in that case. When the successful trace has no final output, the comparison
+is `NOT RECORDED`. A reproduced exception currently matches the recorded
+failure **type**, not the full exception message or every side effect.
+
+Frozen replay does not intercept `random.random()`, time, files, environment
+variables, network calls outside instrumented boundaries, or arbitrary Python
+side effects. Record a final output with `session.set_output(...)` so the CLI
+can detect changes to that value. A matching final output is evidence about
+the recorded return value after secret redaction; it does not prove that every
+side effect or a redacted secret value matched.
+
+CLI diagnostics abbreviate SHA-256 fingerprints for readability. Pass
+`--verbose` to see the full fingerprints. The Python replay exceptions retain
+full fingerprints for programmatic diagnostics.

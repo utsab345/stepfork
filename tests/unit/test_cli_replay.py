@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 import sys
 import textwrap
 from pathlib import Path
@@ -107,6 +108,20 @@ def raise_value_error() -> dict[str, object]:
 
 def raise_type_error() -> dict[str, object]:
     raise TypeError("bad")
+
+def random_value() -> dict[str, float]:
+    import random
+    return {"value": random.random()}
+
+def call_step_a() -> dict[str, str]:
+    return step("a")
+
+@trace_tool(name="failing_step")
+def failing_step() -> None:
+    raise ValueError("dependency failed")
+
+def call_failing_step() -> None:
+    failing_step()
 """
 
 
@@ -151,8 +166,8 @@ def test_replay_cli_success_with_no_tool_calls(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     trace = tmp_path / "plain.sftrace"
-    with record("plain-agent", output=trace) as session:
-        session.set_output({"ok": True})
+    with record("plain-agent", output=trace):
+        pass
     _write_targets(tmp_path)
     monkeypatch.chdir(tmp_path)
 
@@ -166,6 +181,71 @@ def test_replay_cli_success_with_no_tool_calls(
     assert "COMPLETED" in result.stdout
     assert "no dependency calls matched" in result.stdout
     assert "blob" in result.stdout
+    assert "Recorded behavior: NOT RECORDED" in result.stdout
+
+
+def test_replay_cli_detects_untraced_random_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _write_targets(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    from targetpkg.targets import random_value
+
+    trace = tmp_path / "random.sftrace"
+    monkeypatch.setattr(random, "random", lambda: 0.25)
+    with record("random-agent", output=trace) as session:
+        session.set_output(random_value())
+    monkeypatch.setattr(random, "random", lambda: 0.75)
+
+    result = runner.invoke(
+        app, ["replay", str(trace), "--entrypoint", "targetpkg.targets:random_value"]
+    )
+
+    assert result.exit_code == 1
+    assert "Execution: COMPLETED" in result.stdout
+    assert "Dependency matching: COMPLETE" in result.stdout
+    assert "Recorded behavior: DIFFERENT" in result.stdout
+    assert "final result differs" in result.stdout
+
+
+def test_replay_cli_matching_final_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _write_targets(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    trace = tmp_path / "step.sftrace"
+    with record("step-agent", output=trace) as session:
+        session.set_output(step("a"))
+
+    result = runner.invoke(
+        app, ["replay", str(trace), "--entrypoint", "targetpkg.targets:call_step_a"]
+    )
+
+    assert result.exit_code == 0
+    assert "Recorded behavior: MATCHED" in result.stdout
+
+
+def test_replay_cli_short_fingerprints_with_verbose_option(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    trace = tmp_path / "step.sftrace"
+    _record_step(trace)
+    _write_targets(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    args = ["replay", str(trace), "--entrypoint", "targetpkg.targets:call_step_b"]
+
+    short = runner.invoke(app, args)
+    verbose = runner.invoke(app, [*args, "--verbose"])
+
+    assert short.exit_code == verbose.exit_code == 1
+    assert "input fingerprint" in short.stdout
+    assert "…" in short.stdout
+    assert "input fingerprint" in verbose.stdout
+    assert any(len(word) == 64 for word in verbose.stdout.split())
 
 
 def test_replay_cli_reproduces_recorded_failure(
@@ -191,6 +271,34 @@ def test_replay_cli_reproduces_recorded_failure(
     assert result.exit_code == 0
     assert "REPRODUCED FAILURE" in result.stdout
     assert "ValueError" in result.stdout
+
+
+def test_replay_cli_reproduces_recorded_dependency_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _write_targets(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    from targetpkg.targets import call_failing_step
+
+    trace = tmp_path / "dependency_failure.sftrace"
+    with (
+        pytest.raises(ValueError, match="dependency failed"),
+        record("fail-agent", output=trace),
+    ):
+        call_failing_step()
+
+    result = runner.invoke(
+        app,
+        ["replay", str(trace), "--entrypoint", "targetpkg.targets:call_failing_step"],
+    )
+
+    assert result.exit_code == 0
+    assert "Execution: RAISED" in result.stdout
+    assert "Dependency matching: COMPLETE" in result.stdout
+    assert "Recorded behavior: FAILURE TYPE MATCHED" in result.stdout
+    assert "REPRODUCED FAILURE" in result.stdout
 
 
 def test_replay_cli_reports_failed_run_without_raise(
