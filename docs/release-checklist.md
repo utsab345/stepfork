@@ -39,7 +39,9 @@ publishing procedure, TestPyPI dry run, and verification steps.
       `src/stepfork/version.py` accordingly.
 - [ ] Commit the version bump and changelog; tag with `git tag v<version>`.
 - [ ] Publish to the package index (only when a release was explicitly
-      approved):
+      approved). Preferred: create the GitHub Release; the committed
+      `publish.yml` workflow publishes via trusted publishing (OIDC) with no
+      stored token. Manual fallback:
       ```bash
       uv publish
       ```
