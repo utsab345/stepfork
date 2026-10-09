@@ -1,6 +1,6 @@
 # Security Notes
 
-Stepfork is local-first trace tooling. Its Day 4 security features are designed
+Stepfork is local-first trace tooling. Its security features are designed
 to reduce accidental leakage and make saved traces tamper-evident, not to prove
 that a trace is safe to publish.
 
@@ -47,7 +47,7 @@ Integrity statuses:
 
 - `verified`: recorded digests match current files
 - `mismatch`: at least one digest or payload hash does not match
-- `unverified_legacy`: no Day 4 integrity metadata is present
+- `unverified_legacy`: no integrity metadata is present
 
 Integrity is verified on demand. `stepfork validate --verify-integrity` and
 `stepfork inspect` check it; `stepfork replay` and `stepfork export` do not by
@@ -78,19 +78,6 @@ domain-specific identifiers, free-form model text, screenshots, binary blobs, or
 provider-specific credential formats that are not recognized yet.
 
 Inspect traces before sharing them.
-
-## Integrity
-
-New bundles include `integrity.json` with SHA-256 digests for the three payload
-files. SHA-256 is not encryption. The integrity file is not a digital signature.
-An attacker who can modify both the trace files and `integrity.json` can
-recompute the record.
-
-Integrity statuses:
-
-- `verified`: recorded digests match current files
-- `mismatch`: at least one digest or payload hash does not match
-- `unverified_legacy`: no Day 4 integrity metadata is present
 
 ## Safe Sharing Practices
 

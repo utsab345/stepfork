@@ -48,7 +48,7 @@ def validate_command(
         bool,
         typer.Option(
             "--verify-integrity",
-            help="Verify Day 4 payload hashes and bundle integrity metadata.",
+            help="Verify per-event payload hashes and bundle integrity metadata.",
         ),
     ] = False,
 ) -> None:

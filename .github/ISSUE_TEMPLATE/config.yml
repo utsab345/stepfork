@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/utsab345/stepfork/security/advisories/new
+    about: Report security issues privately. Do not open a public issue.
+  - name: Documentation
+    url: https://utsab345.github.io/stepfork/
+    about: Read the documentation and CLI reference before opening an issue.
+  - name: Contributing guide
+    url: https://github.com/utsab345/stepfork/blob/main/CONTRIBUTING.md
+    about: Local setup, development workflow, and pull request expectations.

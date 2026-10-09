@@ -26,10 +26,12 @@ nav:
       - diff.md
       - pytest-export.md
       - trace-format.md
+      - cli.md
   - Troubleshooting: troubleshooting.md
   - Project:
       - security.md
       - architecture.md
+      - integrations.md
       - development.md
       - release-checklist.md
       - releases/v0.1.0a1.md
