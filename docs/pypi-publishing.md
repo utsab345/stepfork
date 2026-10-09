@@ -5,10 +5,11 @@ This checklist covers publishing Stepfork to PyPI using **trusted publishing**
 after a release is explicitly approved. Nothing in this document uploads a
 package on its own.
 
-Current status: **published.** `0.1.0a3` is the latest release on PyPI
-(`0.1.0a2` was the first, uploaded 2026-10-09) and `pip install --pre stepfork`
-resolves to it. `0.1.0a4` is the next prepared release. Subsequent releases
-follow the same procedure below.
+Current status: **published.** `0.1.0a4` is the latest release on PyPI
+(`0.1.0a2` was the first, uploaded 2026-10-09; `0.1.0a3` corrected the package
+metadata) and `pip install --pre stepfork` resolves to it. The next release will
+be a new version (for example `0.1.0a5`). Subsequent releases follow the same
+procedure below.
 
 ## 0. Preconditions
 

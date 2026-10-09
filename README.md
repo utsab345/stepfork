@@ -297,12 +297,12 @@ sources live in `docs/`.
 - [Trace format](docs/trace-format.md)
 - [Security notes](docs/security.md)
 - [Architecture](docs/architecture.md)
-- [Future integrations](docs/integrations.md)
+- [Integrations](docs/integrations.md)
 - [Development](docs/development.md)
 - [Release checklist](docs/release-checklist.md)
 - [PyPI publishing checklist](docs/pypi-publishing.md)
 - [Early adopter guide](docs/community/early-adopter-guide.md)
-- [v0.1.0a1 release notes](docs/releases/v0.1.0a1.md)
+- [Latest release notes (v0.1.0a4)](docs/releases/v0.1.0a4.md)
 - [Changelog](CHANGELOG.md)
 
 ## Security and Limitations
@@ -336,7 +336,7 @@ bundles, are in [docs/security.md](docs/security.md).
 
 ## Roadmap
 
-### v0.1 (released as v0.1.0a1)
+### v0.1.0a1
 
 - Portable `.sftrace`
 - Trace save/load
@@ -350,6 +350,15 @@ bundles, are in [docs/security.md](docs/security.md).
 - Behavioral diff
 - pytest export
 
+### v0.1.0a2-a4
+
+- PyPI publishing with trusted publishing (OIDC)
+- Strict frozen-replay matching and divergence diagnostics
+- OpenAI Python SDK adapter (`stepfork[openai]`)
+- LangGraph adapter (`stepfork[langgraph]`)
+- Offline examples for both adapters
+- Example GitHub Actions regression workflow
+
 ### v0.2
 
 - Failure minimization
@@ -358,10 +367,9 @@ bundles, are in [docs/security.md](docs/security.md).
 
 ### v0.3
 
-- LangGraph
 - OpenAI Agents
 - MCP
-- GitHub Action
+- Reusable GitHub Action
 - Local viewer
 
 ## Contributing

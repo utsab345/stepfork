@@ -21,8 +21,9 @@ It is **not**:
 - a sandbox (replay runs your own code with your own privileges),
 - an automatic minimizer (the exported test uses the full recorded run; see the
   [roadmap](https://github.com/utsab345/stepfork/blob/main/README.md#roadmap)),
-- a framework integration layer (LangGraph, OpenAI Agents, and MCP support are
-  planned; see [Future integrations](../integrations.md)).
+- a framework integration layer (the OpenAI Python SDK and LangGraph adapters
+  are optional add-ons; OpenAI Agents and MCP support are planned. See
+  [Integrations](../integrations.md)).
 
 ## Install the alpha
 
@@ -143,6 +144,6 @@ If you cannot share a trace, describe the event sequence (`stepfork inspect
 - Anything the documentation claims that does not match what you observed.
   Accuracy matters more than optimism in the alpha.
 
-We especially want to know about framework usage, since first-party
-integrations are planned for v0.3 and your instrumentation patterns will shape
-them.
+We especially want to know about framework usage. The OpenAI Python SDK and
+LangGraph adapters are available now, and your instrumentation patterns will
+shape the remaining integrations (see [Integrations](../integrations.md)).
