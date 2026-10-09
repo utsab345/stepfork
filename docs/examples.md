@@ -1,6 +1,6 @@
 # Examples
 
-Three runnable, fully offline example agents ship in this repository. No API
+Four runnable, fully offline example agents ship in this repository. No API
 keys, no network access: each uses a fake provider that stands in for a real
 model or service, so the demos are deterministic and repeatable.
 
@@ -55,9 +55,20 @@ approves the fixed one.
 uv run python examples/refund_agent/demo.py
 ```
 
+## OpenAI SDK-style adapter
+
+`examples/openai_chat` exercises the optional OpenAI Python SDK adapter through
+a fake OpenAI-shaped synchronous client. It records a chat-completions response,
+replays it without executing the SDK call, and exports a regression test for a
+buggy sentiment decision.
+
+```bash
+uv run python examples/openai_chat/demo.py
+```
+
 ## What every demo proves
 
-All three demos end with the same assertions:
+All four demos end with the same assertions:
 
 - the buggy implementation FAILS the generated regression test,
 - the corrected implementation PASSES the same test,

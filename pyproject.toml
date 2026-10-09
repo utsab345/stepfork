@@ -36,6 +36,11 @@ dependencies = [
     "typer>=0.12",
 ]
 
+[project.optional-dependencies]
+openai = [
+    "openai>=1.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/utsab345/stepfork"
 Repository = "https://github.com/utsab345/stepfork"

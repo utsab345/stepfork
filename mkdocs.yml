@@ -25,6 +25,7 @@ nav:
       - replay.md
       - diff.md
       - pytest-export.md
+      - openai.md
       - trace-format.md
       - cli.md
   - Troubleshooting: troubleshooting.md

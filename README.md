@@ -209,7 +209,7 @@ minimal example agent:
 
 ![Stepfork terminal demo](scripts/terminal-demo/stepfork-demo.gif)
 
-Three runnable demo agents ship in this repository (all fully offline, with a
+Four runnable demo agents ship in this repository (all fully offline, with a
 fake provider standing in for a real model):
 
 - `examples/quickstart` - a single-tool order-notification agent; the minimal
@@ -218,6 +218,8 @@ fake provider standing in for a real model):
   tool; books the wrong flight.
 - `examples/refund_agent` - a fake LLM provider paired with a
   refund-policy-check tool; denies an eligible refund.
+- `examples/openai_chat` - the optional OpenAI adapter exercised through a
+  fake OpenAI-shaped sync client; no API key or network call required.
 
 ```bash
 git clone https://github.com/utsab345/stepfork.git
@@ -226,6 +228,7 @@ uv sync
 uv run python examples/quickstart/demo.py
 uv run python examples/booking_agent/demo.py
 uv run python examples/refund_agent/demo.py
+uv run python examples/openai_chat/demo.py
 ```
 
 Each demo records the buggy run, freeze-replays it without touching the
@@ -283,6 +286,7 @@ sources live in `docs/`.
 - [Replay](docs/replay.md)
 - [Behavioral diff](docs/diff.md)
 - [pytest export](docs/pytest-export.md)
+- [OpenAI Python SDK adapter](docs/openai.md)
 - [CLI reference](docs/cli.md)
 - [Trace format](docs/trace-format.md)
 - [Security notes](docs/security.md)
@@ -305,8 +309,9 @@ before v1.0.
 - **No automatic failure minimization.** The exported regression test uses the
   recorded steps. Reducing it to the smallest failing subset and fork-at-step
   are planned work, not automatic behavior.
-- **No framework integrations yet.** LangGraph, OpenAI Agents, and MCP support
-  are planned, not shipped. The proposed design is in
+- **Limited integrations.** The optional OpenAI Python SDK adapter supports
+  synchronous, non-streaming `chat.completions.create`. LangGraph, OpenAI
+  Agents, MCP, streaming, async, and other providers are planned work. See
   [docs/integrations.md](docs/integrations.md).
 - **Replay is not a sandbox.** Running an entrypoint under replay executes
   your own code with your own privileges. Trace data is never executed, but

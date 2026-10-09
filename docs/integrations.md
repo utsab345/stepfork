@@ -1,10 +1,15 @@
-# Future Integrations
+# Integrations
 
 Stepfork's core is framework-independent by design. Recording and replay do
 not depend on LangGraph, OpenAI Agents, MCP, or any agent runtime. That keeps
 the core small, fast, and offline.
 
-This page is a proposal for v0.3. Nothing here is implemented in v0.1.
+One provider adapter is implemented today:
+
+- [OpenAI Python SDK](openai.md): synchronous, non-streaming
+  `chat.completions.create` through an explicit wrapper.
+
+The remaining adapters below are proposals.
 
 ## Design Principle
 
@@ -39,6 +44,14 @@ This mirrors an adapter pattern with three layers:
 - Export unchanged: the exported pytest test drives the entrypoint under
   frozen replay.
 - Status: design only, not implemented.
+
+### OpenAI Python SDK
+
+- Implemented for synchronous, non-streaming `chat.completions.create`.
+- Uses the core `llm_request` boundary and does not change the trace format.
+- Install with `stepfork[openai]` when using the real SDK.
+- Status: minimal adapter implemented; streaming, async, Responses API, and
+  automatic monkeypatching are future work.
 
 ### MCP
 
