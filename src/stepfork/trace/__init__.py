@@ -9,6 +9,11 @@ from stepfork.trace.integrity import (
     IntegrityStatus,
     verify_bundle_integrity,
 )
+from stepfork.trace.jsonable import (
+    Serializer,
+    TraceSerializationError,
+    to_json_value,
+)
 from stepfork.trace.manifest import (
     EnvironmentInfo,
     FailureInfo,
@@ -82,11 +87,13 @@ __all__ = [
     "RunEnd",
     "RunStart",
     "RunStatus",
+    "Serializer",
     "StateChange",
     "ToolCall",
     "ToolResult",
     "Trace",
     "TraceManifest",
+    "TraceSerializationError",
     "TraceStorageError",
     "TraceTotals",
     "ValidationIssue",
@@ -100,6 +107,7 @@ __all__ = [
     "manifest_json_schema",
     "redact_json",
     "save_trace",
+    "to_json_value",
     "trace_json_schema",
     "validate_bundle",
     "validate_trace",

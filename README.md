@@ -22,9 +22,10 @@ Product goal:
 Stepfork is experimental. The API, CLI, and `.sftrace` trace format may change
 before v1.0.
 
-Stepfork now includes typed `.sftrace` v0.1 models, directory storage,
-structural validation, best-effort redaction, integrity verification, and local
-trace inspection. Runtime agent recording, replay, diffing, and export remain
+Stepfork includes typed `.sftrace` v0.1 models, directory storage, structural
+validation, best-effort redaction, integrity verification, local inspection,
+runtime recording, frozen replay, behavioral diffing, and executable pytest
+export. Failure minimization, fork-at-step, and framework integrations remain
 planned work.
 
 ## Installation
@@ -34,6 +35,71 @@ For local development:
 ```bash
 uv sync
 ```
+
+## Quickstart
+
+Record an agent run and assert the behavior you expect after the fix:
+
+```python
+from stepfork import record, trace_tool, llm_request
+
+
+@trace_tool(name="flight_search")
+def search_flights(destination: str) -> dict:
+    return flights_api.search(destination)
+
+
+with record("booking-agent", output="failure.sftrace") as session:
+    response = llm_request(
+        model="demo-model",
+        input={"messages": messages},
+        call=lambda: client.chat(messages),
+    )
+    result = run_agent()
+    session.set_output(result)
+```
+
+Then replay, compare, and export a regression test:
+
+```bash
+stepfork replay failure.sftrace --entrypoint mypkg.agent:run_agent --mode frozen
+stepfork diff baseline.sftrace fixed.sftrace
+stepfork export failure.sftrace --pytest \
+  --entrypoint mypkg.agent:run_agent \
+  --expect-output expected.json \
+  --output test_regression.py --overwrite
+```
+
+The recorded failure is not the expected outcome. `--expect-output` supplies the
+corrected behavior, so the generated test fails on the buggy agent and passes on
+the fixed one.
+
+Run the full end-to-end demo:
+
+```bash
+uv run python examples/booking_agent/demo.py
+```
+
+## CLI
+
+```bash
+stepfork validate demo.sftrace --verify-integrity
+stepfork inspect demo.sftrace --json
+stepfork replay demo.sftrace --entrypoint pkg.module:func --mode frozen
+stepfork diff baseline.sftrace candidate.sftrace --json
+stepfork export demo.sftrace --pytest --entrypoint pkg.module:func
+```
+
+## Documentation
+
+- [Recording](docs/recording.md)
+- [Replay](docs/replay.md)
+- [Behavioral diff](docs/diff.md)
+- [pytest export](docs/pytest-export.md)
+- [Trace format](docs/trace-format.md)
+- [Security notes](docs/security.md)
+- [Architecture](docs/architecture.md)
+- [Development](docs/development.md)
 
 ## Offline Trace API
 
@@ -105,39 +171,20 @@ not encryption, and the unkeyed integrity file is not a digital signature. An
 attacker who can modify both the trace files and `integrity.json` can rewrite
 the record. Inspect traces carefully before sharing them.
 
-## Planned Workflow
+## Workflow
 
 ```text
 failed agent run
       ↓
-record
+record        capture tools, LLM calls, output, and failure
       ↓
-inspect
+inspect       review events, integrity, and error details
       ↓
-frozen replay
+frozen replay rerun the entrypoint without touching dependencies
       ↓
 behavioral diff
       ↓
 pytest regression test
-```
-
-## Planned Quickstart
-
-The examples in this section describe the intended future workflow. They are
-not implemented yet.
-
-```python
-from stepfork import record
-
-with record("checkout-agent"):
-    agent.run("Book the cheapest flight")
-```
-
-```bash
-stepfork inspect latest
-stepfork replay latest --mode frozen
-stepfork diff baseline.sftrace latest.sftrace
-stepfork export latest.sftrace --pytest
 ```
 
 ## Roadmap
@@ -151,10 +198,10 @@ stepfork export latest.sftrace --pytest
 - Integrity verification
 - Validate CLI
 - Inspect CLI
-- Recording (planned)
-- Frozen replay (planned)
-- Behavioral diff (planned)
-- pytest export (planned)
+- Runtime recording
+- Frozen replay
+- Behavioral diff
+- pytest export
 
 ### v0.2
 

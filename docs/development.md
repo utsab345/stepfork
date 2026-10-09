@@ -30,6 +30,18 @@ uv run stepfork validate --help
 uv run stepfork inspect --help
 uv run stepfork inspect tests/golden/successful_run.sftrace
 uv run stepfork validate tests/golden/successful_run.sftrace --verify-integrity
+uv run stepfork replay --help
+uv run stepfork diff --help
+uv run stepfork export --help
+```
+
+## End-to-End Demo
+
+The booking example exercises the whole pipeline with real subprocesses and
+real exit codes:
+
+```bash
+uv run python examples/booking_agent/demo.py
 ```
 
 ## Synthetic Traces

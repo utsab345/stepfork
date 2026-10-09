@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from stepfork import Trace
+from stepfork import Trace, diff_traces
 from stepfork.inspect import inspect_bundle
 from stepfork.trace import validate_bundle
 from stepfork.trace.integrity import IntegrityStatus, verify_bundle_integrity
@@ -16,6 +16,8 @@ COMPLETE_FIXTURES = [
     "successful_run.sftrace",
     "failed_tool_run.sftrace",
     "failed_llm_run.sftrace",
+    "diff_baseline.sftrace",
+    "diff_changed.sftrace",
 ]
 ALL_FIXTURES = [
     *COMPLETE_FIXTURES,
@@ -86,6 +88,25 @@ def test_resaving_golden_preserves_logical_identity(tmp_path: Path) -> None:
     assert [event.step for event in loaded.events] == [
         event.step for event in trace.events
     ]
+
+
+def test_golden_diff_detects_changed_tool_output() -> None:
+    baseline = GOLDEN_ROOT / "diff_baseline.sftrace"
+    candidate = GOLDEN_ROOT / "diff_changed.sftrace"
+
+    result = diff_traces(baseline, candidate)
+
+    assert not result.equivalent
+    paths = {change.path for step in result.steps for change in step.changes}
+    assert "output.selected_flight" in paths
+
+
+def test_golden_diff_identical_is_equivalent() -> None:
+    baseline = GOLDEN_ROOT / "diff_baseline.sftrace"
+
+    result = diff_traces(baseline, baseline)
+
+    assert result.equivalent
 
 
 def test_tampered_golden_copy_fails_integrity(tmp_path: Path) -> None:

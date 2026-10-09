@@ -6,7 +6,10 @@ import typer
 from rich.console import Console
 
 from stepfork import __version__
+from stepfork.cli.diff import diff_command
+from stepfork.cli.export import export_command
 from stepfork.cli.inspect import inspect_command
+from stepfork.cli.replay import replay_command
 from stepfork.cli.validate import validate_command
 
 app = typer.Typer(
@@ -17,7 +20,10 @@ app = typer.Typer(
 
 console = Console()
 
+app.command("diff")(diff_command)
+app.command("export")(export_command)
 app.command("inspect")(inspect_command)
+app.command("replay")(replay_command)
 app.command("validate")(validate_command)
 
 

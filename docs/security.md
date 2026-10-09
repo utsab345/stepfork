@@ -18,6 +18,18 @@ Stepfork does not currently provide:
 - sandboxing for untrusted code
 - complete data-loss prevention
 
+## Trace Data Is Not Code
+
+Trace bundles are treated strictly as data. Stepfork never executes code,
+imports modules, or evaluates expressions found in a trace. Replay and export
+import only the trusted `MODULE:FUNCTION` entrypoint you name on the command
+line. Generated pytest tests come from a fixed, reviewed template; trace payloads
+become sanitized JSON literals and are never interpolated into executable code.
+No `eval` or `exec` is used on trace data.
+
+Running an entrypoint under replay still executes your own code with your own
+privileges. Replay is not a sandbox.
+
 ## Redaction
 
 On save, Stepfork recursively redacts known sensitive keys and common
