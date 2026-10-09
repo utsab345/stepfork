@@ -19,14 +19,15 @@ Product goal:
 
 ## Status
 
-Stepfork is experimental. The API, CLI, and `.sftrace` trace format may change
-before v1.0.
+Stepfork is experimental and under active audit for its first public alpha.
+The API, CLI, and `.sftrace` trace format may change before v1.0.
 
-Stepfork includes typed `.sftrace` v0.1 models, directory storage, structural
-validation, best-effort redaction, integrity verification, local inspection,
-runtime recording, frozen replay, behavioral diffing, and executable pytest
-export. Failure minimization, fork-at-step, and framework integrations remain
-planned work.
+Currently implemented: typed `.sftrace` v0.1 models, directory storage,
+structural validation, best-effort redaction, integrity verification, local
+inspection, runtime recording, frozen replay, behavioral diffing, and
+executable pytest export. Two runnable offline demos ship in this repository,
+backed by 356 tests at ~93% branch coverage. Failure minimization,
+fork-at-step, and framework integrations remain planned work.
 
 ## Installation
 
@@ -34,6 +35,14 @@ For local development:
 
 ```bash
 uv sync
+```
+
+Two fully offline example agents are included; run either demo from the
+repository root to watch a buggy agent become a failing regression test:
+
+```bash
+uv run python examples/booking_agent/demo.py
+uv run python examples/refund_agent/demo.py
 ```
 
 ## Quickstart
@@ -74,11 +83,19 @@ The recorded failure is not the expected outcome. `--expect-output` supplies the
 corrected behavior, so the generated test fails on the buggy agent and passes on
 the fixed one.
 
-Run the full end-to-end demo:
+Run the full end-to-end demos:
 
 ```bash
 uv run python examples/booking_agent/demo.py
+uv run python examples/refund_agent/demo.py
 ```
+
+The booking demo pairs a fake LLM provider with a flight-search tool and books
+the wrong flight. The refund demo pairs a fake LLM provider with a
+refund-policy-check tool and denies an eligible refund. Both demos record the
+buggy run, freeze-replay it without touching the external tool, diff it against
+the fixed run, and export a regression test that fails on the buggy entrypoint
+and passes on the fixed one.
 
 ## CLI
 
@@ -100,6 +117,8 @@ stepfork export demo.sftrace --pytest --entrypoint pkg.module:func
 - [Security notes](docs/security.md)
 - [Architecture](docs/architecture.md)
 - [Development](docs/development.md)
+- [Release checklist](docs/release-checklist.md)
+- [Changelog](CHANGELOG.md)
 
 ## Offline Trace API
 

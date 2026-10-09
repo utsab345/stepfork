@@ -1,6 +1,6 @@
 [project]
 name = "stepfork"
-version = "0.1.0.dev0"
+dynamic = ["version"]
 description = "Behavioral regression testing for AI agents."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -58,6 +58,10 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+
+[tool.hatch.version]
+path = "src/stepfork/version.py"
 
 
 [tool.hatch.build.targets.wheel]

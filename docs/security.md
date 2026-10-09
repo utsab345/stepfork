@@ -18,6 +18,42 @@ Stepfork does not currently provide:
 - sandboxing for untrusted code
 - complete data-loss prevention
 
+## Handling Untrusted Bundles
+
+A `.sftrace` bundle is a directory of JSON files you may receive from someone
+else. Treat it like any other untrusted input:
+
+- **Traces are not executed.** Stepfork imports only the `MODULE:FUNCTION`
+  entrypoint you name. It never imports or runs code embedded in a bundle.
+- **Symlinks are followed.** Payload files inside a bundle are opened by
+  name, so a hostile bundle could point `events.jsonl` at any readable file.
+  The target must still parse as valid trace JSON, and Stepfork never executes
+  it, so the exposure is bounded, but inspect a bundle's file types before
+  replaying or exporting with it.
+- **Payloads are loaded into memory.** Stepfork reads whole payload files.
+  Oversized bundles can consume memory; keep shared bundles small.
+- **Redaction happens at record time, not load time.** A bundle created by an
+  older tool, or hand-edited, may contain values redaction would remove today.
+  Use `stepfork inspect --events` to review payloads before sharing them.
+
+## Integrity
+
+New bundles include `integrity.json` with SHA-256 digests for the three payload
+files. SHA-256 is not encryption. The integrity file is not a digital signature.
+An attacker who can modify both the trace files and `integrity.json` can
+recompute the record.
+
+Integrity statuses:
+
+- `verified`: recorded digests match current files
+- `mismatch`: at least one digest or payload hash does not match
+- `unverified_legacy`: no Day 4 integrity metadata is present
+
+Integrity is verified on demand. `stepfork validate --verify-integrity` and
+`stepfork inspect` check it; `stepfork replay` and `stepfork export` do not by
+default, so use `validate --verify-integrity` before relying on a bundle from
+an untrusted source.
+
 ## Trace Data Is Not Code
 
 Trace bundles are treated strictly as data. Stepfork never executes code,

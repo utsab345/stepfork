@@ -13,8 +13,12 @@ uv run ruff check .
 uv run ruff format --check .
 uv run mypy
 uv run pytest
+uv run pytest --cov=stepfork --cov-branch --cov-report=term-missing
 uv build
 ```
+
+The suite currently has 356 tests and ~93% branch coverage, including
+Hypothesis property tests under `tests/property/`.
 
 Format changed files:
 
@@ -35,14 +39,20 @@ uv run stepfork diff --help
 uv run stepfork export --help
 ```
 
-## End-to-End Demo
+## End-to-End Demos
 
-The booking example exercises the whole pipeline with real subprocesses and
-real exit codes:
+Two examples exercise the whole pipeline with real subprocesses and real exit
+codes:
 
 ```bash
 uv run python examples/booking_agent/demo.py
+uv run python examples/refund_agent/demo.py
 ```
+
+`booking_agent` pairs a fake LLM provider with a flight-search tool;
+`refund_agent` pairs a fake LLM provider with a refund-policy-check tool.
+Both ship a buggy entrypoint that the demonstration converts into a failing
+regression test and a fixed entrypoint that passes it.
 
 ## Synthetic Traces
 
