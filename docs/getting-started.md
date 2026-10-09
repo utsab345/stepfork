@@ -6,14 +6,23 @@ This guide installs Stepfork and walks through the full workflow with a
 
 ## Install
 
+Install the current alpha from PyPI:
+
 ```bash
-pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a1"
+pip install --pre stepfork
+```
+
+The `--pre` flag is required while Stepfork is a pre-release. To install from
+the tagged GitHub repository instead:
+
+```bash
+pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a2"
 ```
 
 Requires Python 3.11, 3.12, or 3.13. This installs the `stepfork` CLI and the
 Python package.
 
-Prefer the `uv` equivalent? `uv pip install` with the same URL works. For
+Prefer `uv`? The same flags and URLs work with `uv pip install`. For
 contributors working from a checkout, use `uv sync` in the repository root
 instead.
 
