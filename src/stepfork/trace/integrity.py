@@ -71,7 +71,7 @@ def write_bundle_integrity(path: Path) -> IntegrityRecord:
 
 
 def verify_bundle_integrity(path: str | Path) -> IntegrityResult:
-    """Verify a bundle's Day 4 integrity record."""
+    """Verify a bundle's integrity record."""
     bundle_path = Path(path)
     integrity_path = bundle_path / INTEGRITY_FILE
     if not integrity_path.exists():
