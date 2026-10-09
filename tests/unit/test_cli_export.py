@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from stepfork import record
@@ -133,3 +134,139 @@ def test_export_cli_invalid_entrypoint(tmp_path: Path) -> None:
     )
 
     assert result.exit_code == 2
+
+
+def test_export_cli_rejects_invalid_trace(tmp_path: Path) -> None:
+    bad = tmp_path / "bad.sftrace"
+    bad.mkdir()
+    (bad / "manifest.json").write_text("not json", encoding="utf-8")
+    (bad / "events.jsonl").write_text("{}\n", encoding="utf-8")
+    (bad / "redactions.json").write_text(
+        '{"schema_version": "0.1", "entries": []}',
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["export", str(bad), "--entrypoint", FIXED_ENTRYPOINT],
+    )
+
+    assert result.exit_code == 2
+    assert "validation" in result.stdout.lower()
+
+
+def test_export_cli_rejects_directory_output(tmp_path: Path) -> None:
+    trace = tmp_path / "booking.sftrace"
+    _record_booking(trace)
+    output = tmp_path / "outdir"
+    output.mkdir()
+
+    result = runner.invoke(
+        app,
+        [
+            "export",
+            str(trace),
+            "--entrypoint",
+            FIXED_ENTRYPOINT,
+            "--output",
+            str(output),
+            "--overwrite",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Export failed" in result.stdout
+
+
+def test_export_cli_warns_without_expect_output(tmp_path: Path) -> None:
+    trace = tmp_path / "booking.sftrace"
+    _record_booking(trace)
+    output = tmp_path / "out.py"
+
+    result = runner.invoke(
+        app,
+        [
+            "export",
+            str(trace),
+            "--entrypoint",
+            FIXED_ENTRYPOINT,
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "warning" in result.stdout.lower()
+    assert "Expectation: {" in result.stdout
+
+
+def test_export_cli_reports_no_expectation_for_failed_run(
+    tmp_path: Path,
+) -> None:
+    trace = tmp_path / "failed.sftrace"
+    with (
+        pytest.raises(ValueError, match="boom"),
+        record("failing-agent", output=trace),
+    ):
+        raise ValueError("boom")
+
+    result = runner.invoke(
+        app,
+        [
+            "export",
+            str(trace),
+            "--entrypoint",
+            FIXED_ENTRYPOINT,
+            "--output",
+            str(tmp_path / "out.py"),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Expectation: none" in result.stdout
+
+
+def test_export_cli_missing_expect_output_file(tmp_path: Path) -> None:
+    trace = tmp_path / "booking.sftrace"
+    _record_booking(trace)
+
+    result = runner.invoke(
+        app,
+        [
+            "export",
+            str(trace),
+            "--entrypoint",
+            FIXED_ENTRYPOINT,
+            "--expect-output",
+            str(tmp_path / "nope.json"),
+            "--output",
+            str(tmp_path / "out.py"),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "Cannot read --expect-output" in result.stdout
+
+
+def test_export_cli_invalid_expect_output_json(tmp_path: Path) -> None:
+    trace = tmp_path / "booking.sftrace"
+    _record_booking(trace)
+    invalid = tmp_path / "invalid.json"
+    invalid.write_text("{nope", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "export",
+            str(trace),
+            "--entrypoint",
+            FIXED_ENTRYPOINT,
+            "--expect-output",
+            str(invalid),
+            "--output",
+            str(tmp_path / "out.py"),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "not valid JSON" in result.stdout

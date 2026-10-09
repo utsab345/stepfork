@@ -6,6 +6,8 @@ import pytest
 
 from stepfork import diff_traces, record, trace_tool
 from stepfork.diff import first_difference, values_equal
+from stepfork.diff.compare import collect_field_changes
+from stepfork.diff.models import FieldChange
 from stepfork.trace import Trace
 
 
@@ -157,3 +159,52 @@ def test_first_difference_finds_leaf_path() -> None:
 def test_values_equal_canonical_profile() -> None:
     assert values_equal({"b": 1, "a": 2}, {"a": 2, "b": 1})
     assert not values_equal(1, 1.0)
+
+
+def test_values_equal_returns_false_for_unsupported_values() -> None:
+    assert not values_equal({"a": 1}, {"a": object()})
+    assert not values_equal([1], {"a": 1})
+
+
+def test_first_difference_missing_dict_keys() -> None:
+    missing_actual = first_difference({"k": 1}, {})
+    assert missing_actual == ("k", 1, None)
+
+    missing_expected = first_difference({}, {"k": 1})
+    assert missing_expected == ("k", None, 1)
+
+
+def test_first_difference_list_length_mismatch() -> None:
+    longer_actual = first_difference([1], [1, 2])
+    assert longer_actual == ("[1]", None, 2)
+
+    longer_expected = first_difference([1, 2], [1])
+    assert longer_expected == ("[1]", 2, None)
+
+
+def test_first_difference_root_scalar() -> None:
+    assert first_difference(1, 2) == ("$", 1, 2)
+
+
+def test_collect_field_changes_detects_list_differences() -> None:
+    changed: list[FieldChange] = []
+    collect_field_changes([1, 2], [1, 3, 4], path="", output=changed)
+
+    assert [change.path for change in changed] == ["[1]", "[2]"]
+    assert [change.kind for change in changed] == ["changed", "added"]
+
+    removed: list[FieldChange] = []
+    collect_field_changes([1, 3, 4], [1, 2], path="", output=removed)
+
+    assert [change.path for change in removed] == ["[1]", "[2]"]
+    assert [change.kind for change in removed] == ["changed", "removed"]
+
+
+def test_collect_field_changes_nested_dict_add_and_remove() -> None:
+    changed: list[FieldChange] = []
+    collect_field_changes({"a": 1}, {"b": 2}, path="", output=changed)
+
+    assert {change.path: change.kind for change in changed} == {
+        "a": "removed",
+        "b": "added",
+    }

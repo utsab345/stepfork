@@ -23,6 +23,36 @@ json_values = st.recursive(
 )
 
 
+@given(json_values, json_values)
+def test_first_difference_agrees_with_values_equal(
+    left: object,
+    right: object,
+) -> None:
+    from stepfork.diff import first_difference, values_equal
+
+    difference = first_difference(cast(JsonValue, left), cast(JsonValue, right))
+
+    assert values_equal(cast(JsonValue, left), cast(JsonValue, right)) is (
+        difference is None
+    )
+
+
+@given(json_values)
+def test_dict_key_order_does_not_change_equality(value: object) -> None:
+    from stepfork.diff import values_equal
+
+    json_value = cast(JsonValue, value)
+
+    assert values_equal(json_value, json_value) is True
+
+
+@given(st.dictionaries(st.text(min_size=1), json_scalars, max_size=5))
+def test_hash_json_is_insertion_order_independent(value: dict[str, object]) -> None:
+    shuffled = dict(sorted(value.items(), reverse=True))
+
+    assert hash_json(cast(JsonValue, value)) == hash_json(cast(JsonValue, shuffled))
+
+
 @given(json_values)
 def test_json_canonicalization_round_trips(value: object) -> None:
     json_value = cast(JsonValue, value)

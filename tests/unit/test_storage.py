@@ -214,3 +214,120 @@ def test_event_order_and_identity_survive_round_trip(tmp_path: Path) -> None:
     assert loaded.events[2].output_hash != "output123"
     assert loaded.events[1].input_hash is not None
     assert loaded.events[2].output_hash is not None
+
+
+def test_save_rejects_non_directory_destination(tmp_path: Path) -> None:
+    destination = tmp_path / "file.sftrace"
+    destination.write_text("occupied", encoding="utf-8")
+
+    with pytest.raises(TraceStorageError, match="not a directory"):
+        Trace(agent_name="demo-agent").save(destination)
+
+
+def test_load_rejects_file_instead_of_directory(tmp_path: Path) -> None:
+    destination = tmp_path / "file.sftrace"
+    destination.write_text("nope", encoding="utf-8")
+
+    with pytest.raises(TraceStorageError, match="not a directory"):
+        Trace.load(destination)
+
+
+def test_load_rejects_required_file_as_directory(tmp_path: Path) -> None:
+    destination = tmp_path / "demo.sftrace"
+    destination.mkdir()
+    (destination / "manifest.json").mkdir()
+    (destination / "events.jsonl").write_text(
+        '{"type": "run_start", "status": "ok", "run_id": "r", "step": 0}\n',
+        encoding="utf-8",
+    )
+    (destination / "redactions.json").write_text(
+        '{"schema_version": "0.1", "entries": []}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(TraceStorageError, match="not a file"):
+        Trace.load(destination)
+
+
+def test_load_rejects_blank_jsonl_line(tmp_path: Path) -> None:
+    destination = tmp_path / "demo.sftrace"
+    Trace(agent_name="demo-agent").save(destination)
+    (destination / "events.jsonl").write_text("\n", encoding="utf-8")
+
+    with pytest.raises(TraceStorageError, match="blank JSONL"):
+        Trace.load(destination)
+
+
+def test_load_rejects_invalid_manifest_json(tmp_path: Path) -> None:
+    destination = tmp_path / "demo.sftrace"
+    Trace(agent_name="demo-agent").save(destination)
+    (destination / "manifest.json").write_text("{nope", encoding="utf-8")
+
+    with pytest.raises(TraceStorageError, match="invalid JSON"):
+        Trace.load(destination)
+
+
+def test_load_rejects_non_object_manifest(tmp_path: Path) -> None:
+    destination = tmp_path / "demo.sftrace"
+    Trace(agent_name="demo-agent").save(destination)
+    (destination / "manifest.json").write_text("[1, 2]", encoding="utf-8")
+
+    with pytest.raises(TraceStorageError, match="expected object"):
+        Trace.load(destination)
+
+
+def test_load_rejects_invalid_manifest_payload(tmp_path: Path) -> None:
+    destination = tmp_path / "demo.sftrace"
+    Trace(agent_name="demo-agent").save(destination)
+    manifest = json.loads((destination / "manifest.json").read_text())
+    manifest["agent_name"] = 5
+    (destination / "manifest.json").write_text(json.dumps(manifest))
+
+    with pytest.raises(TraceStorageError, match="invalid manifest"):
+        Trace.load(destination)
+
+
+def test_load_rejects_invalid_redactions_json(tmp_path: Path) -> None:
+    destination = tmp_path / "demo.sftrace"
+    Trace(agent_name="demo-agent").save(destination)
+    (destination / "redactions.json").write_text("{nope", encoding="utf-8")
+
+    with pytest.raises(TraceStorageError, match="invalid JSON"):
+        Trace.load(destination)
+
+
+def test_load_rejects_non_object_redactions(tmp_path: Path) -> None:
+    destination = tmp_path / "demo.sftrace"
+    Trace(agent_name="demo-agent").save(destination)
+    (destination / "redactions.json").write_text("42", encoding="utf-8")
+
+    with pytest.raises(TraceStorageError, match="invalid redactions object"):
+        Trace.load(destination)
+
+
+def test_load_rejects_unsupported_redactions_schema(tmp_path: Path) -> None:
+    destination = tmp_path / "demo.sftrace"
+    Trace(agent_name="demo-agent").save(destination)
+    (destination / "redactions.json").write_text(
+        '{"schema_version": "9.9", "entries": []}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(TraceStorageError, match="unsupported redactions"):
+        Trace.load(destination)
+
+
+def test_overwrite_roundtrip_through_backup(tmp_path: Path) -> None:
+    destination = tmp_path / "demo.sftrace"
+    trace = Trace(agent_name="demo-agent")
+    trace.save(destination)
+
+    updated = Trace(agent_name="overwritten")
+    updated.add(ToolCall(name="search", input={"query": "Kathmandu flights"}))
+    updated.save(destination, overwrite=True)
+
+    loaded = Trace.load(destination)
+    assert loaded.agent_name == "overwritten"
+    assert loaded.totals.tool_calls == 1
+    assert not list(tmp_path.glob("*.bak-*"))
+    assert not list(tmp_path.glob(".demo.sftrace.bak-*"))

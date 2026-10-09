@@ -1,5 +1,6 @@
 from typer.testing import CliRunner
 
+from stepfork import __version__
 from stepfork.cli.main import app
 
 runner = CliRunner()
@@ -16,7 +17,7 @@ def test_cli_version() -> None:
     result = runner.invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert "stepfork 0.1.0.dev0" in result.stdout
+    assert f"stepfork {__version__}" in result.stdout
 
 
 def test_cli_without_command_shows_help() -> None:

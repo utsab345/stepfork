@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import textwrap
 from pathlib import Path
 
 import pytest
 
-from stepfork import record
+from stepfork import record, trace_tool
 from stepfork.export import (
     EntrypointError,
     ExportError,
@@ -31,6 +32,41 @@ def _record_buggy(destination: Path) -> None:
 
     with record("booking-agent", output=destination) as session:
         session.set_output(agent.run_agent())
+
+
+@trace_tool(name="step")
+def _step_tool(value: str) -> dict[str, str]:
+    return {"value": value}
+
+
+def _record_step(destination: Path) -> None:
+    with record("step-agent", output=destination) as session:
+        session.set_output(_step_tool("a"))
+
+
+_TARGETS = """
+from stepfork import trace_tool
+
+@trace_tool(name="step")
+def step(value: str) -> dict[str, str]:
+    return {"value": value}
+
+def call_step_b(value: str = "b") -> dict[str, str]:
+    return step(value)
+
+def noop() -> dict[str, object]:
+    return {}
+"""
+
+
+def _write_targets(directory: Path) -> None:
+    package = directory / "targetpkg"
+    package.mkdir(parents=True, exist_ok=True)
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "targets.py").write_text(
+        textwrap.dedent(_TARGETS),
+        encoding="utf-8",
+    )
 
 
 def test_resolve_entrypoint_rejects_invalid_specs() -> None:
@@ -72,6 +108,32 @@ def test_generated_source_compiles(tmp_path: Path) -> None:
     assert "assert True" not in source
     assert "eval(" not in source
     assert "exec(" not in source
+    assert "run_regression_case" in source
+
+
+def test_generated_source_escapes_hostile_trace_name_and_entrypoint(
+    tmp_path: Path,
+) -> None:
+    hostile = tmp_path / 'evil"""\nimport os; os.system("echo PWNED")\n# .sftrace'
+    with record("agent", output=hostile) as session:
+        session.set_output({"ok": True})
+
+    entrypoint = 'mod"""\nimport os\n#:fn'
+    source = generate_pytest_source(
+        trace_path=hostile,
+        output_path=tmp_path / "test_regression.py",
+        entrypoint=entrypoint,
+        expectation={"ok": True},
+        import_root=REPO_ROOT,
+    )
+
+    compile(source, "<generated>", "exec")
+    opening = source.index('"""')
+    doc_end = source.find('"""', opening + 3)
+    doc_body = source[opening + 3 : doc_end]
+    assert doc_body.count('"""') == 0
+    assert 'os.system("echo PWNED")' not in doc_body
+    assert 'mod"""' not in doc_body
     assert "run_regression_case" in source
 
 
@@ -185,6 +247,77 @@ def test_run_regression_case_missing_trace(tmp_path: Path) -> None:
             import_root=REPO_ROOT,
             entrypoint="examples.booking_agent:run_agent",
             expectation=EXPECTED,
+        )
+
+
+def test_run_regression_case_unreadable_trace(tmp_path: Path) -> None:
+    trace = tmp_path / "run.sftrace"
+    _record_buggy(trace)
+    (trace / "events.jsonl").write_text("{", encoding="utf-8")
+
+    with pytest.raises(AssertionError, match="trace bundle unreadable"):
+        run_regression_case(
+            trace_path=trace,
+            import_root=REPO_ROOT,
+            entrypoint="examples.booking_agent:run_agent",
+            expectation=EXPECTED,
+        )
+
+
+def test_run_regression_case_failed_entrypoint(tmp_path: Path) -> None:
+    trace = tmp_path / "run.sftrace"
+    _record_buggy(trace)
+
+    with pytest.raises(AssertionError, match="entrypoint failed"):
+        run_regression_case(
+            trace_path=trace,
+            import_root=REPO_ROOT,
+            entrypoint="examples.booking_agent:not_a_function",
+            expectation=EXPECTED,
+        )
+
+
+def test_run_regression_case_replay_input_mismatch(tmp_path: Path) -> None:
+    trace = tmp_path / "run.sftrace"
+    _record_step(trace)
+    _write_targets(tmp_path)
+
+    with pytest.raises(AssertionError, match="replay divergence"):
+        run_regression_case(
+            trace_path=trace,
+            import_root=tmp_path,
+            entrypoint="targetpkg.targets:call_step_b",
+            expectation={"value": "a"},
+            mode="frozen",
+        )
+
+
+def test_run_regression_case_unmatched_recorded_calls(tmp_path: Path) -> None:
+    trace = tmp_path / "run.sftrace"
+    _record_step(trace)
+    _write_targets(tmp_path)
+
+    with pytest.raises(AssertionError, match="replay divergence"):
+        run_regression_case(
+            trace_path=trace,
+            import_root=tmp_path,
+            entrypoint="targetpkg.targets:noop",
+            expectation={"value": "a"},
+            mode="frozen",
+        )
+
+
+def test_run_regression_case_forbidden_mode(tmp_path: Path) -> None:
+    trace = tmp_path / "run.sftrace"
+    _record_buggy(trace)
+
+    with pytest.raises(AssertionError, match="replay policy violation"):
+        run_regression_case(
+            trace_path=trace,
+            import_root=REPO_ROOT,
+            entrypoint="examples.booking_agent:run_agent",
+            expectation=EXPECTED,
+            mode="forbidden",
         )
 
 
