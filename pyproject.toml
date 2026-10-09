@@ -40,6 +40,7 @@ dependencies = [
 Homepage = "https://github.com/utsab345/stepfork"
 Repository = "https://github.com/utsab345/stepfork"
 Issues = "https://github.com/utsab345/stepfork/issues"
+PyPI = "https://pypi.org/project/stepfork/"
 
 [project.scripts]
 stepfork = "stepfork.cli.main:app"

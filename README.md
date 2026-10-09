@@ -13,6 +13,7 @@
 </p>
 
 <p align="center">
+  <a href="https://pypi.org/project/stepfork/"><img alt="PyPI" src="https://img.shields.io/pypi/v/stepfork?include_prereleases&label=PyPI&color=blue"></a>
   <a href="https://github.com/utsab345/stepfork/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/utsab345/stepfork/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://utsab345.github.io/stepfork/"><img alt="Docs" src="https://github.com/utsab345/stepfork/actions/workflows/docs.yml/badge.svg"></a>
   <a href="https://www.apache.org/licenses/LICENSE-2.0"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg"></a>
@@ -42,7 +43,7 @@ services.
 Stepfork turns a failed AI-agent execution into a reproducible pytest
 regression test.
 
-<img src="assets/stepfork-workflow.png" alt="Stepfork workflow diagram" style="max-width: 100%;">
+<img src="https://raw.githubusercontent.com/utsab345/stepfork/main/assets/stepfork-workflow.png" alt="Stepfork workflow diagram" style="max-width: 100%;">
 
 **Workflow:** Instrument → Record → Inspect → Validate → Frozen Replay →
 Compare → Define Expected Behavior → Export pytest → Verify Fix
@@ -65,15 +66,21 @@ Compare → Define Expected Behavior → Export pytest → Verify Fix
 
 ## Installation
 
-V0.1.0a1 is the first public alpha, released from this repository. It is not on
-PyPI yet; install from GitHub:
+Stepfork is published on PyPI. Install the current alpha with:
 
 ```bash
 # pip
-pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a1"
+pip install --pre stepfork
 
 # uv
-uv pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a1"
+uv pip install --pre stepfork
+```
+
+The `--pre` flag is required while Stepfork is a pre-release. You can also
+install from the tagged GitHub repository:
+
+```bash
+pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a2"
 ```
 
 Requires Python 3.11, 3.12, or 3.13. This installs the `stepfork` CLI and the
@@ -286,8 +293,8 @@ sources live in `docs/`.
 Stepfork is experimental. The API, CLI, and `.sftrace` trace format may change
 before v1.0.
 
-- **Not published to PyPI yet.** Install from the GitHub repository as shown
-  above.
+- **Alpha on PyPI.** `pip install --pre stepfork` installs the current
+  pre-release; the API and trace format may still change.
 - **No automatic failure minimization.** The exported regression test uses the
   recorded steps. Reducing it to the smallest failing subset and fork-at-step
   are planned work, not automatic behavior.

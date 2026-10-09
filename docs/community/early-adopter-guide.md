@@ -26,15 +26,19 @@ It is **not**:
 
 ## Install the alpha
 
-Stepfork is not on PyPI for this alpha. Install from the tagged repository:
+Stepfork is on PyPI. Install the current alpha:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a1"
+pip install --pre stepfork
 pip install pytest
 stepfork --version
 ```
+
+The `--pre` flag is required while Stepfork is a pre-release. Alternatively,
+install the tagged repository build:
+`pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a2"`.
 
 Requires Python 3.11, 3.12, or 3.13.
 

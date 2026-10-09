@@ -5,9 +5,9 @@ This checklist covers publishing Stepfork to PyPI using **trusted publishing**
 after a release is explicitly approved. Nothing in this document uploads a
 package on its own.
 
-Current status: **not published to PyPI.** The `stepfork` name was unclaimed on
-PyPI as of 2026-10-09. Re-check before starting, because project names are
-first-come, first-served.
+Current status: **published.** `0.1.0a2` was uploaded to PyPI on 2026-10-09 via
+trusted publishing, and `pip install --pre stepfork` resolves to it. Subsequent
+releases follow the same procedure below.
 
 ## 0. Preconditions
 
