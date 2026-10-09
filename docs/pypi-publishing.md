@@ -51,6 +51,10 @@ page. This does not fail `twine check`, but consider using absolute
 
 ## 3. Test on TestPyPI first
 
+The committed workflow targets PyPI. For a TestPyPI dry run, use a temporary
+variant that adds `repository-url: https://test.pypi.org/legacy/` to the
+publish step and register a TestPyPI trusted publisher.
+
 - [ ] Configure a trusted publisher for TestPyPI (see below).
 - [ ] Publish to TestPyPI and verify a clean install:
       `pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ --pre stepfork`
@@ -75,55 +79,19 @@ On the package index:
 
 ## 5. Publishing workflow
 
-Add a workflow (only when the release is approved) that builds and publishes
-via OIDC. Sketch to adapt, not a committed workflow:
+The trusted-publishing workflow is committed at
+[`.github/workflows/publish.yml`](https://github.com/utsab345/stepfork/blob/main/.github/workflows/publish.yml).
+It:
 
-```yaml
-name: Publish
+- runs only on `release: published` or `workflow_dispatch` (never on pushes or
+  pull requests);
+- builds the sdist and wheel, runs `twine check`, and verifies that
+  `src/stepfork/version.py` matches the release tag;
+- publishes from a job bound to the `pypi` environment with `id-token: write`,
+  using `pypa/gh-action-pypi-publish`, so no API token is stored.
 
-on:
-  release:
-    types: [published]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v10.1.0
-      - run: uv build
-      - run: uvx twine check dist/*
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-      - uses: pypa/gh-action-pypi-publish@release/v1
-```
-
-Notes:
-
-- `id-token: write` is required for trusted publishing; the action obtains a
-  short-lived OIDC token.
-- Restrict the `publish` job to the `pypi` environment so protection rules
-  apply.
-- Publish only from a tag or GitHub Release; a plain branch push must not
-  publish.
+Because the `publish` job targets the `pypi` environment, add required
+reviewers to that environment if you want a human to approve each publish.
 
 ## 6. Publish and verify
 

@@ -1,0 +1,70 @@
+name: Publish
+
+# Publishes to PyPI using trusted publishing (OIDC). No API token is stored.
+# This workflow only runs when a GitHub Release is published, or when a
+# maintainer manually dispatches it. It does not run on pushes or pull requests.
+#
+# Prerequisites before the first publish (see docs/pypi-publishing.md):
+#   - a PyPI pending/trusted publisher for owner `utsab345`, repo `stepfork`,
+#     workflow `publish.yml`, environment `pypi`;
+#   - a GitHub environment named `pypi` (optionally with required reviewers).
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.1.0
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Validate distributions
+        run: uvx twine check dist/*
+
+      - name: Verify version matches release tag
+        if: github.event_name == 'release'
+        run: |
+          version=$(python3 -c "import pathlib,re; print(re.search(r'__version__\s*=\s*\"([^\"]+)\"', pathlib.Path('src/stepfork/version.py').read_text()).group(1))")
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$version" != "$tag" ]; then
+            echo "version.py ($version) does not match release tag ($tag)" >&2
+            exit 1
+          fi
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/stepfork
+    permissions:
+      id-token: write
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
