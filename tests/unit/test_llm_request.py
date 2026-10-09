@@ -74,7 +74,7 @@ def test_frozen_replay_detects_input_mismatch(tmp_path: Path) -> None:
 
     with (
         ReplaySession.from_trace(destination, mode="frozen"),
-        pytest.raises(ReplayMismatchError, match="input diverged"),
+        pytest.raises(ReplayMismatchError, match="input fingerprint"),
     ):
         llm_request(
             provider="fake",
@@ -95,6 +95,61 @@ def test_frozen_replay_detects_model_mismatch(tmp_path: Path) -> None:
         llm_request(
             provider="fake",
             model="other-model",
+            input={"messages": [{"role": "user", "content": "hi"}]},
+            call=lambda: {"content": "live"},
+        )
+
+
+def test_frozen_replay_detects_prompt_change(tmp_path: Path) -> None:
+    destination = tmp_path / "llm.sftrace"
+    _record_llm(destination)
+
+    with (
+        ReplaySession.from_trace(destination, mode="frozen"),
+        pytest.raises(ReplayMismatchError, match="input fingerprint"),
+    ):
+        llm_request(
+            provider="fake",
+            model="demo",
+            input={"messages": [{"role": "user", "content": "changed prompt"}]},
+            call=lambda: {"content": "live"},
+        )
+
+
+def test_frozen_replay_detects_provider_mismatch(tmp_path: Path) -> None:
+    destination = tmp_path / "llm.sftrace"
+    _record_llm(destination)
+
+    with (
+        ReplaySession.from_trace(destination, mode="frozen"),
+        pytest.raises(ReplayMismatchError, match="expected provider"),
+    ):
+        llm_request(
+            provider=None,
+            model="demo",
+            input={"messages": [{"role": "user", "content": "hi"}]},
+            call=lambda: {"content": "live"},
+        )
+
+
+def test_frozen_replay_detects_added_provider_on_legacy_request(
+    tmp_path: Path,
+) -> None:
+    destination = tmp_path / "llm.sftrace"
+    _record_llm(destination, model="demo")
+    trace = Trace.load(destination)
+    for index, event in enumerate(trace.events):
+        if event.type is EventType.LLM_REQUEST:
+            trace.events[index] = event.model_copy(update={"provider": None})
+            break
+
+    with (
+        ReplaySession.from_trace(trace, mode="frozen"),
+        pytest.raises(ReplayMismatchError, match="expected provider None"),
+    ):
+        llm_request(
+            provider="fake",
+            model="demo",
             input={"messages": [{"role": "user", "content": "hi"}]},
             call=lambda: {"content": "live"},
         )

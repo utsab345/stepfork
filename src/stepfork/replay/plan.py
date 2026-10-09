@@ -43,9 +43,11 @@ class RecordedCall:
     model: str | None
     provider: str | None
     input: JsonValue
+    input_hash: str | None
     policy: ReplayPolicy
     status: EventStatus
     output: JsonValue | None
+    output_hash: str | None
     error_type: str | None
     error_message: str | None
     missing: bool
@@ -167,9 +169,11 @@ def _build_tool_call(
             model=None,
             provider=None,
             input=call.input,
+            input_hash=call.input_hash,
             policy=call.replay_policy,
             status=EventStatus.SKIPPED,
             output=None,
+            output_hash=None,
             error_type=None,
             error_message=None,
             missing=True,
@@ -198,9 +202,11 @@ def _build_tool_call(
         model=None,
         provider=None,
         input=call.input,
+        input_hash=call.input_hash,
         policy=call.replay_policy,
         status=result.status,
         output=result.output,
+        output_hash=result.output_hash,
         error_type=error_type,
         error_message=error_message,
         missing=False,
@@ -226,9 +232,11 @@ def _build_llm_call(
             model=request.model,
             provider=request.provider,
             input=request.input,
+            input_hash=request.input_hash,
             policy=request.replay_policy,
             status=response.status,
             output=response.output,
+            output_hash=response.output_hash,
             error_type=None,
             error_message=None,
             missing=False,
@@ -244,9 +252,11 @@ def _build_llm_call(
             model=request.model,
             provider=request.provider,
             input=request.input,
+            input_hash=request.input_hash,
             policy=request.replay_policy,
             status=EventStatus.ERROR,
             output=None,
+            output_hash=error.output_hash,
             error_type=error.error_type,
             error_message=error.message,
             missing=False,
@@ -261,9 +271,11 @@ def _build_llm_call(
         model=request.model,
         provider=request.provider,
         input=request.input,
+        input_hash=request.input_hash,
         policy=request.replay_policy,
         status=EventStatus.SKIPPED,
         output=None,
+        output_hash=None,
         error_type=None,
         error_message=None,
         missing=True,

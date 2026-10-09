@@ -202,6 +202,7 @@ def _bind_arguments(
         bound = inspect.signature(target).bind(*args, **kwargs)
     except (TypeError, ValueError):
         return {"args": list(args), "kwargs": dict(kwargs)}
+    bound.apply_defaults()
     arguments: dict[str, Any] = dict(bound.arguments)
     arguments.pop("self", None)
     arguments.pop("cls", None)

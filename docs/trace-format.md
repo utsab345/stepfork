@@ -48,6 +48,12 @@ Events share structural fields such as `id`, `run_id`, `parent_id`, `step`,
 `timestamp`, `status`, and `replay_policy`. Payload hashes are stored in
 `input_hash` and `output_hash` where applicable.
 
+`input_hash` and `output_hash` are SHA-256 digests over Stepfork's canonical
+JSON profile after redaction has been applied. During replay, dependency
+inputs are re-normalized, redacted, canonicalized, and compared against the
+recording. For LLM requests this means prompt payload changes, model changes,
+and provider changes are treated as replay divergence.
+
 ## Redactions
 
 `redactions.json` stores non-secret metadata describing redactions:
@@ -85,4 +91,7 @@ signature.
 
 The schema version is currently `0.1`. New readers should keep loading older
 valid v0.1 bundles where possible. Missing integrity metadata means unverified
-legacy, not verified.
+legacy, not verified. Older or hand-built events may also lack payload hashes;
+they can still replay if their stored inputs exactly match the live calls, but
+Stepfork reports computed fingerprints in diagnostics rather than silently
+treating them as integrity-verified.

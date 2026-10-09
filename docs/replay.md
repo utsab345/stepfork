@@ -21,6 +21,36 @@ instrumented tools and `llm_request` calls inside `run_agent()` observe it.
 `verify_complete()` raises `ReplayExhaustedError` if recorded dependency calls
 were left unmatched, which catches agents that skip a recorded step.
 
+## Matching guarantees
+
+Replay is strict about the recorded dependency sequence. For each intercepted
+dependency call, Stepfork checks:
+
+- call order,
+- dependency kind (`tool` or `llm`),
+- tool name,
+- LLM provider and model,
+- redacted canonical JSON input, including prompt payloads passed to
+  `llm_request`,
+- recorded input and output fingerprints when the bundle contains them.
+
+Tool arguments are normalized with Python signature binding before recording
+and replay. Defaulted parameters are included in the normalized input, so a
+changed tool default is treated as argument drift instead of silently reusing a
+stale result.
+
+When a call diverges, diagnostics show the expected and actual call metadata,
+redacted input previews, and SHA-256 fingerprints of the redacted canonical
+inputs or recorded outputs. LLM model/provider diagnostics also include a model metadata
+fingerprint. These fingerprints help compare runs without adding new secret
+material to the trace.
+
+Legacy or hand-built traces that do not contain input hashes remain replayable
+when their full recorded input still matches the live call. The diagnostic
+marks those fingerprints as computed from the loaded trace. If a stored input
+or output fingerprint is present but does not match the recorded payload,
+replay rejects the bundle and recommends `stepfork validate --verify-integrity`.
+
 ## Modes
 
 | Mode | Behavior |
@@ -31,13 +61,16 @@ were left unmatched, which catches agents that skip a recorded step.
 | `manual` | Reject dependency calls that are not explicitly approved. |
 | `derived` | Reserved; not supported in v0.1. |
 
-In `frozen`, `live`, and `manual` a call whose name, inputs, or model does not
-match the recording raises `ReplayMismatchError` before anything executes.
+In `frozen` and `live`, a call whose name, provider, model, inputs, or
+fingerprints do not match the recording raises `ReplayMismatchError` before
+the dependency body executes. `manual` and `forbidden` reject calls before
+matching because those modes require explicit policy handling.
 
 ## Errors
 
 - `ReplayMismatchError`: the entrypoint diverged from the recording (wrong tool
-  name, inputs, or model) or a recorded result is missing.
+  name, LLM provider/model, inputs, prompt payload, fingerprint, or a recorded
+  result is missing.
 - `ReplayExhaustedError`: a recorded call was consumed twice, or
   `verify_complete()` found unmatched calls.
 - `ReplayPolicyError`: the mode or per-call policy forbids execution.

@@ -30,8 +30,18 @@ Any deviation fails loudly rather than guessing.
   recording.
 - `call #N: expected tool {label!r} but the agent called {name!r}` - tool name
   or instrumentation mismatch.
-- `call #N: input diverged from the recording` - inputs are not deterministic.
-  Make the inputs deterministic and re-record.
+- `call #N: ... input diverged from the recording` - inputs are not
+  deterministic, a prompt changed, or a tool default/argument changed. The
+  diagnostic includes redacted expected/actual previews and input
+  fingerprints. Make the inputs deterministic and re-record.
+- `expected provider ... but the agent used ...` - the LLM provider metadata
+  changed or was omitted. Re-record the trace for the new provider/model
+  boundary.
+- `recorded ... has an invalid input fingerprint` or `recorded ... has an
+  invalid output fingerprint` - the event payload no longer
+  matches its stored hash. Run `stepfork validate --verify-integrity`; do not
+  use the bundle for strict replay unless you independently trust and repair
+  it.
 - `Invalid replay mode {mode!r}.` - use one of `frozen`, `live`, `forbidden`,
   or `manual`. `derived` exists in the data model but is not supported in
   v0.1.

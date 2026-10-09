@@ -23,6 +23,7 @@ from stepfork.replay.exceptions import (
 )
 from stepfork.replay.plan import RecordedCall, extract_recorded_calls
 from stepfork.trace.canonical import canonical_json_bytes
+from stepfork.trace.hashing import hash_json
 from stepfork.trace.models import EventStatus, JsonValue, Trace
 from stepfork.trace.redaction import redact_json
 from stepfork.trace.replay_policy import ReplayPolicy
@@ -204,10 +205,19 @@ class ReplaySession:
             )
 
         if self._cursor >= len(self.calls):
+            actual_descriptor = _call_descriptor(
+                kind=kind,
+                name=name,
+                model=model,
+                provider=provider,
+            )
+            actual_fingerprint = _fingerprint(redact_json(input).value)
             raise ReplayExhaustedError(
                 f"unexpected {kind} call {label!r}: all "
                 f"{len(self.calls)} recorded dependency call(s) were already "
-                "consumed"
+                f"consumed\n"
+                f"  actual: {actual_descriptor}\n"
+                f"  actual input fingerprint: {actual_fingerprint}"
             )
 
         position = self._cursor
@@ -237,6 +247,7 @@ class ReplaySession:
                 f"no captured result for recorded {kind} call "
                 f"{expected.label!r} at position {position + 1}"
             )
+        self._verify_recorded_output_fingerprint(expected, position=position)
 
         self._cursor = position + 1
         matched = MatchedCall(
@@ -277,31 +288,51 @@ class ReplaySession:
         position: int,
     ) -> None:
         position_label = position + 1
+        actual_descriptor = _call_descriptor(
+            kind=kind,
+            name=name,
+            model=model,
+            provider=provider,
+        )
+        recorded_descriptor = _recorded_descriptor(expected)
         if expected.kind != kind:
             raise ReplayMismatchError(
                 f"call #{position_label}: expected {expected.kind} "
                 f"{expected.label!r} but the agent made a {kind} call "
-                f"{name if kind == 'tool' else model!r}"
+                f"{name if kind == 'tool' else model!r}\n"
+                f"  recorded: {recorded_descriptor}\n"
+                f"  actual:   {actual_descriptor}"
             )
         if kind == "tool" and name != expected.name:
             raise ReplayMismatchError(
                 f"call #{position_label}: expected tool {expected.label!r} "
-                f"but the agent called {name!r}"
+                f"but the agent called {name!r}\n"
+                f"  recorded: {recorded_descriptor}\n"
+                f"  actual:   {actual_descriptor}"
             )
         if kind == "llm":
+            recorded_model_fingerprint = _model_fingerprint(
+                expected.provider,
+                expected.model,
+            )
+            actual_model_fingerprint = _model_fingerprint(provider, model)
             if model != expected.model:
                 raise ReplayMismatchError(
                     f"call #{position_label}: expected LLM model "
-                    f"{expected.model!r} but the agent used {model!r}"
+                    f"{expected.model!r} but the agent used {model!r}\n"
+                    f"  recorded: {recorded_descriptor}\n"
+                    f"  actual:   {actual_descriptor}\n"
+                    f"  recorded model fingerprint: {recorded_model_fingerprint}\n"
+                    f"  actual model fingerprint:   {actual_model_fingerprint}"
                 )
-            if (
-                expected.provider is not None
-                and provider is not None
-                and provider != expected.provider
-            ):
+            if provider != expected.provider:
                 raise ReplayMismatchError(
                     f"call #{position_label}: expected provider "
-                    f"{expected.provider!r} but the agent used {provider!r}"
+                    f"{expected.provider!r} but the agent used {provider!r}\n"
+                    f"  recorded: {recorded_descriptor}\n"
+                    f"  actual:   {actual_descriptor}\n"
+                    f"  recorded model fingerprint: {recorded_model_fingerprint}\n"
+                    f"  actual model fingerprint:   {actual_model_fingerprint}"
                 )
 
     def _match_input(
@@ -312,6 +343,19 @@ class ReplaySession:
         position: int,
     ) -> None:
         sanitized = redact_json(input).value
+        recorded_fingerprint = _recorded_input_fingerprint(expected)
+        actual_fingerprint = _fingerprint(sanitized)
+        if expected.input_hash is not None and expected.input_hash != _fingerprint(
+            expected.input
+        ):
+            raise ReplayMismatchError(
+                f"call #{position + 1}: recorded {expected.kind} "
+                f"{expected.label!r} has an invalid input fingerprint\n"
+                f"  recorded input fingerprint: {expected.input_hash}\n"
+                f"  computed input fingerprint: {_fingerprint(expected.input)}\n"
+                "  run `stepfork validate --verify-integrity` on the trace; "
+                "legacy or tampered recordings cannot be used for strict replay"
+            )
         try:
             matches = canonical_json_bytes(sanitized) == canonical_json_bytes(
                 expected.input
@@ -321,9 +365,31 @@ class ReplaySession:
         if matches:
             return
         raise ReplayMismatchError(
-            f"call #{position + 1}: input diverged from the recording\n"
+            f"call #{position + 1}: {expected.kind} {expected.label!r} "
+            "input diverged from the recording\n"
+            f"  recorded input fingerprint: {recorded_fingerprint}\n"
+            f"  actual input fingerprint:   {actual_fingerprint}\n"
             f"  recorded: {_preview(expected.input)}\n"
             f"  actual:   {_preview(sanitized)}"
+        )
+
+    def _verify_recorded_output_fingerprint(
+        self,
+        expected: RecordedCall,
+        *,
+        position: int,
+    ) -> None:
+        if expected.output_hash is None:
+            return
+        if expected.output_hash == _fingerprint(expected.output):
+            return
+        raise ReplayMismatchError(
+            f"call #{position + 1}: recorded {expected.kind} "
+            f"{expected.label!r} has an invalid output fingerprint\n"
+            f"  recorded output fingerprint: {expected.output_hash}\n"
+            f"  computed output fingerprint: {_fingerprint(expected.output)}\n"
+            "  run `stepfork validate --verify-integrity` on the trace; "
+            "legacy or tampered recordings cannot be used for strict replay"
         )
 
 
@@ -336,3 +402,49 @@ def _preview(value: JsonValue) -> str:
     if len(text) > PREVIEW_LIMIT:
         return f"{text[: PREVIEW_LIMIT - 1]}…"
     return text
+
+
+def _fingerprint(value: JsonValue | None) -> str:
+    if value is None:
+        return "<none>"
+    try:
+        return hash_json(value)
+    except Exception:
+        return "<unavailable>"
+
+
+def _recorded_input_fingerprint(expected: RecordedCall) -> str:
+    if expected.input_hash is not None:
+        return expected.input_hash
+    computed = _fingerprint(expected.input)
+    if computed == "<unavailable>":
+        return "<legacy unavailable>"
+    return f"{computed} (computed; recording had no stored input_hash)"
+
+
+def _model_fingerprint(provider: str | None, model: str | None) -> str:
+    return _fingerprint({"provider": provider, "model": model})
+
+
+def _recorded_descriptor(expected: RecordedCall) -> str:
+    if expected.kind == "tool":
+        return f"tool name={expected.name!r}"
+    return (
+        f"llm provider={expected.provider!r} model={expected.model!r} "
+        f"model_fingerprint={_model_fingerprint(expected.provider, expected.model)}"
+    )
+
+
+def _call_descriptor(
+    *,
+    kind: Literal["tool", "llm"],
+    name: str | None,
+    model: str | None,
+    provider: str | None,
+) -> str:
+    if kind == "tool":
+        return f"tool name={name!r}"
+    return (
+        f"llm provider={provider!r} model={model!r} "
+        f"model_fingerprint={_model_fingerprint(provider, model)}"
+    )

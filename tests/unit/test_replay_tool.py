@@ -20,6 +20,7 @@ from stepfork.trace import (
     RunStart,
     RunStatus,
     ToolCall,
+    ToolResult,
     Trace,
 )
 
@@ -36,6 +37,12 @@ def dangerous_external_tool() -> dict[str, bool]:
 def safe_tool(value: str) -> dict[str, str]:
     EXTERNAL_CALLS.append(value)
     return {"value": value}
+
+
+@trace_tool(name="defaulted_tool")
+def defaulted_tool(region: str = "eu") -> dict[str, str]:
+    EXTERNAL_CALLS.append(region)
+    return {"region": region}
 
 
 @trace_tool(name="failing_tool")
@@ -98,9 +105,29 @@ def test_replay_input_mismatch_is_detected(tmp_path: Path) -> None:
 
     with (
         ReplaySession.from_trace(destination, mode="frozen"),
-        pytest.raises(ReplayMismatchError, match="input diverged"),
+        pytest.raises(ReplayMismatchError, match="input fingerprint"),
     ):
         safe_tool("b")
+
+
+def test_replay_detects_omitted_default_argument_drift() -> None:
+    trace = Trace(agent_name="demo-agent")
+    trace.add(RunStart())
+    call = trace.add(ToolCall(name="defaulted_tool", input={"region": "us"}))
+    trace.add(
+        ToolResult(
+            name="defaulted_tool",
+            output={"region": "us"},
+            parent_id=call.id,
+        )
+    )
+    trace.add(RunEnd(run_status=RunStatus.COMPLETED))
+
+    with (
+        ReplaySession.from_trace(trace, mode="frozen"),
+        pytest.raises(ReplayMismatchError, match="input diverged"),
+    ):
+        defaulted_tool()
 
 
 def test_replay_wrong_tool_name_is_detected(tmp_path: Path) -> None:
@@ -122,6 +149,16 @@ def test_replay_exhausted_trace(tmp_path: Path) -> None:
         safe_tool("a")
         with pytest.raises(ReplayExhaustedError, match="already consumed"):
             safe_tool("a")
+
+
+def test_replay_exhausted_reports_actual_call_fingerprint(tmp_path: Path) -> None:
+    destination = tmp_path / "run.sftrace"
+    _record(destination, lambda: safe_tool("a"))
+
+    with ReplaySession.from_trace(destination, mode="frozen"):
+        safe_tool("a")
+        with pytest.raises(ReplayExhaustedError, match="actual input fingerprint"):
+            safe_tool("b")
 
 
 def test_repeated_calls_are_matched_in_order(tmp_path: Path) -> None:
@@ -184,6 +221,66 @@ def test_missing_result_is_rejected() -> None:
         pytest.raises(ReplayMismatchError, match="no captured result"),
     ):
         safe_tool("a")
+
+
+def test_replay_rejects_recorded_input_hash_mismatch() -> None:
+    trace = Trace(agent_name="demo-agent")
+    trace.add(RunStart())
+    call = trace.add(ToolCall(name="safe_tool", input={"value": "a"}))
+    trace.events[1] = call.model_copy(update={"input_hash": "0" * 64})
+    trace.add(
+        ToolResult(
+            name="safe_tool",
+            output={"value": "a"},
+            parent_id=call.id,
+        )
+    )
+    trace.add(RunEnd(run_status=RunStatus.COMPLETED))
+
+    with (
+        ReplaySession.from_trace(trace, mode="frozen"),
+        pytest.raises(ReplayMismatchError, match="invalid input fingerprint"),
+    ):
+        safe_tool("a")
+
+
+def test_replay_rejects_recorded_output_hash_mismatch() -> None:
+    trace = Trace(agent_name="demo-agent")
+    trace.add(RunStart())
+    call = trace.add(ToolCall(name="safe_tool", input={"value": "a"}))
+    result = trace.add(
+        ToolResult(
+            name="safe_tool",
+            output={"value": "a"},
+            parent_id=call.id,
+        )
+    )
+    trace.events[2] = result.model_copy(update={"output_hash": "0" * 64})
+    trace.add(RunEnd(run_status=RunStatus.COMPLETED))
+
+    with (
+        ReplaySession.from_trace(trace, mode="frozen"),
+        pytest.raises(ReplayMismatchError, match="invalid output fingerprint"),
+    ):
+        safe_tool("a")
+
+
+def test_legacy_recording_without_input_hash_still_matches_explicitly() -> None:
+    trace = Trace(agent_name="legacy-agent")
+    trace.add(RunStart())
+    call = trace.add(ToolCall(name="safe_tool", input={"value": "a"}))
+    trace.add(
+        ToolResult(
+            name="safe_tool",
+            output={"value": "a"},
+            parent_id=call.id,
+        )
+    )
+    trace.add(RunEnd(run_status=RunStatus.COMPLETED))
+
+    with ReplaySession.from_trace(trace, mode="frozen") as replay:
+        assert safe_tool("a") == {"value": "a"}
+        replay.verify_complete()
 
 
 def test_forbidden_recorded_policy_is_enforced(tmp_path: Path) -> None:
