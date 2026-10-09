@@ -4,6 +4,8 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
+from typer import rich_utils
 from typer.testing import CliRunner
 
 from stepfork import ToolCall, Trace
@@ -121,7 +123,9 @@ def test_validate_missing_trace_returns_unreadable(tmp_path: Path) -> None:
     assert "missing_file" in result.stdout
 
 
-def test_validate_help() -> None:
+def test_validate_help(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(rich_utils, "MAX_WIDTH", 200)
+    monkeypatch.setattr(rich_utils, "COLOR_SYSTEM", None)
     result = runner.invoke(app, ["validate", "--help"])
 
     assert result.exit_code == 0

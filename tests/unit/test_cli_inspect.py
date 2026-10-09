@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+from typer import rich_utils
 from typer.testing import CliRunner
 
 from stepfork import FailureInfo, ToolCall, Trace
@@ -123,7 +125,9 @@ def test_inspect_missing_bundle(tmp_path: Path) -> None:
     assert "Unable to inspect trace" in result.stdout
 
 
-def test_inspect_help() -> None:
+def test_inspect_help(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(rich_utils, "MAX_WIDTH", 200)
+    monkeypatch.setattr(rich_utils, "COLOR_SYSTEM", None)
     result = runner.invoke(app, ["inspect", "--help"])
 
     assert result.exit_code == 0
