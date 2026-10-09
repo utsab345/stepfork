@@ -32,6 +32,9 @@ hatchling via `[tool.hatch.version]`.
 
 ## Publishing
 
+See the [PyPI publishing checklist](pypi-publishing.md) for the trusted
+publishing procedure, TestPyPI dry run, and verification steps.
+
 - [ ] Decide whether to change the `Development Status` classifier and bump
       `src/stepfork/version.py` accordingly.
 - [ ] Commit the version bump and changelog; tag with `git tag v<version>`.

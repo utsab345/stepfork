@@ -98,6 +98,7 @@ the generated test.
 
 ## Frozen
 
-The replay mode used for regression testing: every dependency call is answered
-from the recording. The assurance that "no external dependency executed" comes
-from never calling the real tool body during replay.
+The replay mode used for regression testing: every instrumented dependency call
+is answered from the recording. The assurance that "no instrumented external
+dependency executed" comes from never calling the real tool body during replay;
+calls outside instrumented boundaries are not intercepted.

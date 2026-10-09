@@ -81,7 +81,7 @@ Inspect traces before sharing them.
 
 ## Safe Sharing Practices
 
-- Prefer sharing minimized synthetic traces.
+- Prefer sharing small, synthetic traces you have reviewed.
 - Run `stepfork validate --verify-integrity` before relying on a fixture.
 - Run `stepfork inspect` and review payloads before sending a bundle anywhere.
 - Treat legacy bundles as unverified unless independently trusted.

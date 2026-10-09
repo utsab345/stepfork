@@ -19,9 +19,9 @@ instead.
 
 ## 60-second example
 
-The agent below looks up an order status with an external tool and decides
+The agent below looks up an order status with an instrumented tool and decides
 whether to notify the customer. The buggy version only notifies when an order
-is *delivered*, so a shipped order is skipped.
+is *delivered*, so a shipped order is skipped. Save this as `agent.py`:
 
 ```python
 from stepfork import record, trace_tool
@@ -29,34 +29,71 @@ from stepfork import record, trace_tool
 
 @trace_tool(name="order_status")
 def order_status(order_id: str) -> dict:
-    return shipping_service.status(order_id)  # your real dependency
+    # Stand-in for your real dependency. Offline and deterministic.
+    return {"order_id": order_id, "status": "shipped", "carrier": "FedEx"}
 
 
-def run_agent(order_id: str) -> dict:
+def run_agent(order_id: str = "ORD-1001") -> dict:
     status = order_status(order_id)
-    # bug: "delivered" never fires for a shipped order
-    should_notify = status["status"] == "delivered"
-    return {"order_id": order_id, "should_notify": should_notify}
+    should_notify = status["status"] == "delivered"  # bug: shipped orders skipped
+    return {
+        "order_id": order_id,
+        "should_notify": should_notify,
+        "carrier": status["carrier"],
+    }
 
 
-with record("notify-agent", output="failure.sftrace") as session:
-    result = run_agent("ORD-1001")
-    session.set_output(result)
+def run_agent_fixed(order_id: str = "ORD-1001") -> dict:
+    status = order_status(order_id)
+    should_notify = status["status"] == "shipped"  # fix: notify on shipment
+    return {
+        "order_id": order_id,
+        "should_notify": should_notify,
+        "carrier": status["carrier"],
+    }
+
+
+if __name__ == "__main__":
+    with record("notify-agent", output="failure.sftrace") as session:
+        result = run_agent()
+        session.set_output(result)
+    print(result)
 ```
 
-The shipped order is skipped (`{"should_notify": false}`). Fix the agent, then
-turn the recorded failure into a regression test that expects the corrected
-behavior:
+Record the failure:
 
 ```bash
+python agent.py
+```
+
+```text
+{'order_id': 'ORD-1001', 'should_notify': False, 'carrier': 'FedEx'}
+```
+
+Define the corrected behavior and export a regression test for both
+entrypoints:
+
+```bash
+printf '{"order_id": "ORD-1001", "should_notify": true, "carrier": "FedEx"}' > expected.json
+
 stepfork export failure.sftrace --pytest \
-  --entrypoint yourpkg.agent:run_agent \
+  --entrypoint agent:run_agent \
   --expect-output expected.json \
-  --output test_notify.py --overwrite
+  --output test_notify_buggy.py --overwrite
+
+stepfork export failure.sftrace --pytest \
+  --entrypoint agent:run_agent_fixed \
+  --expect-output expected.json \
+  --output test_notify_fixed.py --overwrite
 ```
 
 `expected.json` holds the behavior you want after the fix. The generated test
-fails on the buggy agent and passes on the fixed one.
+fails on the buggy entrypoint and passes on the fixed one:
+
+```bash
+python -m pytest -q test_notify_buggy.py   # 1 failed (behavior mismatch)
+python -m pytest -q test_notify_fixed.py   # 1 passed
+```
 
 ## The core workflow
 
@@ -79,8 +116,9 @@ pytest regression test
    (and, for LLM calls, `stepfork.llm_request`). The run is saved as a
    `.sftrace` bundle, including when the block raises.
 2. [Replay](replay.md) the failure with frozen dependencies. Stepfork returns
-   the recorded responses instead of calling real services, so a replayed run
-   touches nothing external.
+   the recorded responses for instrumented tool and LLM calls instead of
+   calling those dependencies again, so a replayed run does not re-execute
+   those real services.
 3. Fix the agent, then [diff](diff.md) the recorded failure against a corrected
    run to see exactly which behaviors changed.
 4. [Export](pytest-export.md) a pytest regression test from the recorded
