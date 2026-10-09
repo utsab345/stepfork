@@ -73,14 +73,12 @@ The `.github/workflows/docs.yml` workflow builds the site (strict mode), uploads
 it, and deploys to GitHub Pages. Deployment uses the least-privileged Pages
 permissions: `contents: read`, `pages: write`, and `id-token: write`.
 
-One-time setup before the first deploy:
-
-1. Open repository Settings, then Pages.
-2. Under Build and deployment, set Source to GitHub Actions.
-
-The Pages URL is https://utsab345.github.io/stepfork/. Wait for the workflow
-to finish after enabling Pages; do not assume it deployed until the URL
-responds.
+Pages is already enabled for this repository. The site is live at
+https://utsab345.github.io/stepfork/. If a fresh fork needs the same setup,
+enable Pages once under Settings, then Pages, Build and deployment, Source:
+GitHub Actions. `actions/configure-pages` only requires this once; it does not
+need the enablement parameter, whose create-site call is not available to the
+GitHub token.
 
 ## Synthetic Traces
 
