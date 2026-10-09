@@ -1,7 +1,7 @@
 # CLI Reference
 
 The `stepfork` CLI manages `.sftrace` bundles. This page documents every
-command as of v0.1.0a1. Run `stepfork --help` for an up-to-date summary.
+command as of v0.1.0a2. Run `stepfork --help` for an up-to-date summary.
 
 ```text
 Usage: stepfork [OPTIONS] COMMAND [ARGS]...

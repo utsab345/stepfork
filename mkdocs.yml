@@ -37,6 +37,7 @@ nav:
       - development.md
       - release-checklist.md
       - pypi-publishing.md
+      - releases/v0.1.0a2.md
       - releases/v0.1.0a1.md
 
 markdown_extensions:

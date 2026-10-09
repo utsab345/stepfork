@@ -4,6 +4,36 @@ All notable changes to Stepfork are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.0a2] - 2026-10-09
+
+First distribution published to PyPI, using GitHub Actions trusted publishing
+(OpenID Connect) with no stored API token.
+
+### Added
+
+- PyPI packaging: install with `pip install --pre stepfork` (pre-release).
+- Minimal quickstart example (`examples/quickstart/`) with an integration test
+  that turns a failing run into a pytest regression test.
+- MkDocs documentation site (getting started, concepts, examples, CLI
+  reference, integrations, troubleshooting, record/replay/diff/export guides)
+  deployed to GitHub Pages.
+- `docs/cli.md`, `docs/integrations.md`,
+  `docs/community/early-adopter-guide.md`, and `docs/pypi-publishing.md`.
+- Trusted-publishing workflow (`.github/workflows/publish.yml`) and a docs
+  build/deploy workflow.
+- Terminal demo (`scripts/terminal-demo/`) and a workflow diagram asset.
+- `docs/examples.md` and `docs/troubleshooting.md`.
+
+### Changed
+
+- README rewritten for newcomers: quickstart, installation, CLI, and
+  troubleshooting.
+- Publishing runs only when a GitHub Release is published and its tag matches
+  `src/stepfork/version.py`; there is no manual trigger and no API token.
+- CLI help text and docstrings no longer reference internal milestones.
+
+[0.1.0a2]: https://github.com/utsab345/stepfork/releases/tag/v0.1.0a2
+
 ## [0.1.0a1] - 2026-10-09
 
 Prepared for first public alpha.

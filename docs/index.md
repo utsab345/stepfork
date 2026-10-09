@@ -70,4 +70,4 @@ page walks through the three runnable demo agents in this repository.
 
 Stepfork is experimental. See the
 [changelog](https://github.com/utsab345/stepfork/blob/main/CHANGELOG.md) and
-the [v0.1.0a1 release notes](releases/v0.1.0a1.md) for what shipped.
+the [v0.1.0a2 release notes](releases/v0.1.0a2.md) for what shipped.
