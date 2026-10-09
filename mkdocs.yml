@@ -28,12 +28,15 @@ nav:
       - trace-format.md
       - cli.md
   - Troubleshooting: troubleshooting.md
+  - Community:
+      - Early adopter guide: community/early-adopter-guide.md
   - Project:
       - security.md
       - architecture.md
       - integrations.md
       - development.md
       - release-checklist.md
+      - pypi-publishing.md
       - releases/v0.1.0a1.md
 
 markdown_extensions:

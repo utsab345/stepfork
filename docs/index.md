@@ -3,10 +3,9 @@
 Your agent failed. Make the failure a test.
 
 Stepfork is a local-first, open source tool for behavioral regression testing
-of AI agents. It records what an agent actually did during a run (every
-external tool call, every LLM request, the final output), then turns the run
-into a deterministic pytest regression test that encodes the corrected
-behavior.
+of AI agents. It records what an agent actually did during a run (instrumented
+tool calls, instrumented LLM requests, the final output), then turns the run
+into a pytest regression test that encodes the corrected behavior.
 
 ## The problem
 
@@ -32,8 +31,8 @@ pytest regression test
 
 - **Record** a buggy run into a portable `.sftrace` bundle, including runs
   that raise.
-- **Replay** it with dependencies frozen: responses come from the recording, so
-  no external service or tool body ever runs.
+- **Replay** it with dependencies frozen: instrumented tool and LLM calls are
+  answered from the recording, so their real bodies do not run again.
 - **Diff** the buggy behavior against a corrected run to see exactly what
   changed.
 - **Export** a pytest regression test that fails on the buggy code and passes
@@ -47,7 +46,7 @@ all run locally.
 - Typed `.sftrace` v0.1 trace format with canonical JSON persistence
 - Best-effort secret redaction
 - SHA-256 integrity verification
-- Frozen replay that never executes dependency bodies
+- Frozen replay that never executes instrumented dependency bodies
 - Behavioral diffing across equivalent dependency calls
 - Executable pytest export with corrected expectations
 - Python 3.11, 3.12, and 3.13 support

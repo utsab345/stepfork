@@ -21,8 +21,8 @@
 
 Product goal:
 
-> Turn a failed AI-agent run into the smallest reproducible pytest regression
-> test, locally, in under five minutes.
+> Turn a failed AI-agent run into a reproducible pytest regression test,
+> locally, in under five minutes.
 
 ## The problem
 
@@ -30,11 +30,12 @@ AI agents fail in ways unit tests miss. A flight-search agent books the wrong
 flight. A refund agent denies an eligible claim. When you diagnose such a
 failure you usually hand-write a fix and hope the regression is covered.
 
-Stepfork records what an agent actually did during a run: every external tool
-call, every LLM request, and the final output. When the agent misbehaves, you
-replay that recording and export it as an executable pytest regression test
-that asserts the corrected behavior. The test fails on the buggy code and
-passes on the fix, without fakes, mocks, or network calls.
+Stepfork records what an agent actually did during a run: every instrumented
+tool call, every instrumented LLM request, and the final output. When the agent
+misbehaves, you replay that recording and export it as an executable pytest
+regression test that asserts the corrected behavior. The test fails on the
+buggy code and passes on the fix, using the recorded responses instead of live
+services.
 
 ## How Stepfork Works
 
@@ -51,7 +52,9 @@ Compare → Define Expected Behavior → Export pytest → Verify Fix
 - **Record** a buggy run into a portable `.sftrace` bundle, including runs
   that raise. Recording is local-first; nothing leaves your machine.
 - **Frozen replay** reruns your entrypoint with responses taken from the
-  recording, so no external service or tool body ever runs.
+  recording, so instrumented tool and LLM bodies never run again. Calls outside
+  instrumented boundaries are not intercepted; wrap every external dependency
+  you want frozen with `@trace_tool` or `llm_request`.
 - **Behavioral diff** compares a buggy run against a corrected run and reports
   exactly which behaviors changed.
 - **pytest export** turns a recorded failure into a regression test that
@@ -273,6 +276,8 @@ sources live in `docs/`.
 - [Future integrations](docs/integrations.md)
 - [Development](docs/development.md)
 - [Release checklist](docs/release-checklist.md)
+- [PyPI publishing checklist](docs/pypi-publishing.md)
+- [Early adopter guide](docs/community/early-adopter-guide.md)
 - [v0.1.0a1 release notes](docs/releases/v0.1.0a1.md)
 - [Changelog](CHANGELOG.md)
 
@@ -292,6 +297,9 @@ before v1.0.
 - **Replay is not a sandbox.** Running an entrypoint under replay executes
   your own code with your own privileges. Trace data is never executed, but
   the entrypoint you name is.
+- **Only instrumented boundaries are frozen.** Frozen replay substitutes calls
+  made through `@trace_tool` and `llm_request`. Any external call your code
+  makes outside those boundaries is not recorded and is not intercepted.
 - **Redaction is best-effort.** Pattern-based redaction can miss sensitive
   information embedded in unusual tool outputs or domain-specific payloads.
 - **Replay requires determinism.** Dependencies that do not honor the recorded
