@@ -30,7 +30,7 @@ instead.
 
 The agent below looks up an order status with an instrumented tool and decides
 whether to notify the customer. The buggy version only notifies when an order
-is *delivered*, so a shipped order is skipped. Save this as `agent.py`:
+is *delivered*, so a shipped order is skipped. Save this as `quickstart.py`:
 
 ```python
 from stepfork import record, trace_tool
@@ -72,7 +72,7 @@ if __name__ == "__main__":
 Record the failure:
 
 ```bash
-python agent.py
+python quickstart.py
 ```
 
 ```text
@@ -86,12 +86,12 @@ entrypoints:
 printf '{"order_id": "ORD-1001", "should_notify": true, "carrier": "FedEx"}' > expected.json
 
 stepfork export failure.sftrace --pytest \
-  --entrypoint agent:run_agent \
+  --entrypoint quickstart:run_agent \
   --expect-output expected.json \
   --output test_notify_buggy.py --overwrite
 
 stepfork export failure.sftrace --pytest \
-  --entrypoint agent:run_agent_fixed \
+  --entrypoint quickstart:run_agent_fixed \
   --expect-output expected.json \
   --output test_notify_fixed.py --overwrite
 ```

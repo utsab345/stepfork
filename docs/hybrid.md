@@ -40,9 +40,15 @@ does not make trajectory assertions valid.
 
 For an executable reviewed test, use `run_regression_case(..., mode="hybrid",
 live_llms={...}, expectation=..., trajectory_expectation=...)` or pass the same
-arguments to `generate_pytest_source`. Keep live tests outside ordinary CI
-unless their provider is a deterministic fake; real-model evaluations have
-variable cost, latency, and behavior.
+arguments to `generate_pytest_source`, which is importable from the public
+`stepfork.export` package:
+
+```python
+from stepfork.export import generate_pytest_source
+```
+
+Keep live tests outside ordinary CI unless their provider is a deterministic
+fake; real-model evaluations have variable cost, latency, and behavior.
 
 This foundation does not allow live tools in hybrid mode. It does not fork at a
 trace step, choose individual repeated LLM occurrences, or realign a changed

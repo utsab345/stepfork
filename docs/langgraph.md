@@ -41,48 +41,167 @@ random message identifiers.
 
 ## Usage
 
+The example below is complete and fully offline: a deterministic scripted chat
+model stands in for a real provider, so you can run it without an API key. It
+wraps the model with `traced_chat_model`, wraps the tool with `@traced_tool`,
+routes the model's tool call through a `ToolNode`, and records the run.
+
+<!-- langgraph-example:start -->
 ```python
-from langchain_core.tools import tool
-from langgraph.graph import END, START, MessagesState, StateGraph
+from __future__ import annotations
+
+from typing import Annotated, Any
+
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
+from langgraph.graph import END, START, StateGraph
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode
+from pydantic import Field
+from typing_extensions import TypedDict
+
 from stepfork import record
 from stepfork.integrations.langgraph import traced_chat_model, traced_tool
+
+LOOKUPS: list[str] = []
 
 
 @traced_tool
 def lookup_customer(email: str) -> str:
     """Look up a customer record by email."""
+    LOOKUPS.append(email)
     return f"customer={email};tier=gold"
 
 
-def build_agent(model):
-    agent = traced_chat_model(model)
+SCRIPT = [
+    AIMessage(
+        content="",
+        tool_calls=[
+            {
+                "name": "lookup_customer",
+                "args": {"email": "ada@example.com"},
+                "id": "call_lookup",
+            }
+        ],
+    ),
+    AIMessage(content="Ada is a gold customer."),
+]
 
-    def node(state: MessagesState):
-        response = agent.invoke(state["messages"])
-        return {"messages": [response]}
 
-    graph = StateGraph(MessagesState)
-    graph.add_node("agent", node)
+class ScriptedChatModel(BaseChatModel):
+    """Deterministic stand-in for a real chat model; no API key required."""
+
+    model_name: str = "scripted-triage"
+    script: list[AIMessage] = Field(default_factory=lambda: list(SCRIPT))
+    cursor: int = 0
+
+    @property
+    def _llm_type(self) -> str:
+        return "scripted"
+
+    def bind_tools(self, tools: Any, **kwargs: Any) -> ScriptedChatModel:
+        return self
+
+    def _generate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: Any = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        message = self.script[min(self.cursor, len(self.script) - 1)]
+        self.cursor += 1
+        return ChatResult(generations=[ChatGeneration(message=message)])
+
+
+class TriageState(TypedDict):
+    messages: Annotated[list[BaseMessage], add_messages]
+    answer: str
+
+
+def build_graph() -> Any:
+    model = traced_chat_model(ScriptedChatModel())
+    tools = [lookup_customer]
+    model_with_tools = model.bind_tools(tools)
+
+    def agent(state: TriageState) -> dict[str, Any]:
+        return {"messages": [model_with_tools.invoke(state["messages"])]}
+
+    def route(state: TriageState) -> str:
+        last = state["messages"][-1]
+        return "tools" if getattr(last, "tool_calls", None) else "finish"
+
+    def finish(state: TriageState) -> dict[str, Any]:
+        results = [m.content for m in state["messages"] if isinstance(m, ToolMessage)]
+        return {"answer": results[-1] if results else ""}
+
+    graph = StateGraph(TriageState)
+    graph.add_node("agent", agent)
+    graph.add_node("tools", ToolNode(tools))
+    graph.add_node("finish", finish)
     graph.add_edge(START, "agent")
-    graph.add_edge("agent", END)
-    return graph.compile(tools=[lookup_customer])
+    graph.add_conditional_edges("agent", route, {"tools": "tools", "finish": "finish"})
+    graph.add_edge("tools", "agent")
+    graph.add_edge("finish", END)
+
+    return graph.compile()
+
+
+def run_agent() -> dict[str, Any]:
+    result = build_graph().invoke(
+        {"messages": [HumanMessage(content="Is ada@example.com a gold customer?")]}
+    )
+    return {"answer": result["answer"]}
+
+
+if __name__ == "__main__":
+    with record("langgraph-triage", output="triage.sftrace") as session:
+        result = run_agent()
+        session.set_output(result)
+    print(result)
+```
+<!-- langgraph-example:end -->
+
+Save it as `langgraph_example.py` and run it; the instrumented tool executes once
+and the run is recorded:
+
+```bash
+python langgraph_example.py
 ```
 
-Record a run and export a regression test exactly as with any other Stepfork
-entrypoint:
+```text
+{'answer': 'customer=ada@example.com;tier=gold'}
+```
+
+A frozen replay reruns `run_agent()` with the recorded model and tool responses.
+`LOOKUPS` stays empty because the instrumented tool body never runs again:
 
 ```python
-from stepfork import record
-from stepfork.export import export_pytest_test
+from stepfork import ReplaySession
 
-with record("triage", output="triage.sftrace") as session:
-    session.set_output(run_agent())
+import langgraph_example
+
+langgraph_example.LOOKUPS.clear()
+with ReplaySession.from_trace("triage.sftrace", mode="frozen") as replay:
+    result = langgraph_example.run_agent()
+    replay.verify_complete()
+assert result == {"answer": "customer=ada@example.com;tier=gold"}
+assert langgraph_example.LOOKUPS == []
+```
+
+Export the recording as a committed regression test against your trusted fixed
+entrypoint exactly as with any other Stepfork entrypoint (shown here as
+`myapp.agent:run_agent_fixed`):
+
+```python
+from stepfork.export import export_pytest_test
 
 export_pytest_test(
     trace_path="triage.sftrace",
     output_path="tests/test_triage.py",
     entrypoint="myapp.agent:run_agent_fixed",
-    expectation={"approved": True},
+    expectation={"answer": "customer=ada@example.com;tier=gold"},
     has_expectation=True,
 )
 ```
