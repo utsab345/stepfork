@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -89,6 +90,97 @@ def test_export_cli_writes_test(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert output.is_file()
     assert "run_regression_case" in output.read_text(encoding="utf-8")
+
+
+def test_export_cli_live_tool_authorization(tmp_path: Path) -> None:
+    trace = tmp_path / "booking.sftrace"
+    _record_booking(trace)
+    output = tmp_path / "test_live.py"
+    denied = runner.invoke(
+        app,
+        [
+            "export",
+            str(trace),
+            "--entrypoint",
+            FIXED_ENTRYPOINT,
+            "--allow-live-tool",
+            "search_flights",
+            "--output",
+            str(output),
+        ],
+    )
+    assert denied.exit_code == 2
+    assert not output.exists()
+
+    allowed = runner.invoke(
+        app,
+        [
+            "export",
+            str(trace),
+            "--entrypoint",
+            FIXED_ENTRYPOINT,
+            "--mode",
+            "live",
+            "--allow-live-tool",
+            "search_flights",
+            "--output",
+            str(output),
+        ],
+    )
+    assert allowed.exit_code == 0
+    assert "ALLOW_LIVE_TOOLS = set(['search_flights'])" in output.read_text(
+        encoding="utf-8"
+    )
+
+
+def test_export_cli_accepts_reviewed_trajectory_json(tmp_path: Path) -> None:
+    trace = tmp_path / "booking.sftrace"
+    _record_booking(trace)
+    expected = tmp_path / "trajectory.json"
+    expected.write_text(
+        json.dumps({"called": ["search_flights"], "max_steps": 3}),
+        encoding="utf-8",
+    )
+    output = tmp_path / "test_regression.py"
+    result = runner.invoke(
+        app,
+        [
+            "export",
+            str(trace),
+            "--entrypoint",
+            FIXED_ENTRYPOINT,
+            "--expect-trajectory",
+            str(expected),
+            "--output",
+            str(output),
+        ],
+    )
+    assert result.exit_code == 0
+    assert "TRAJECTORY_EXPECTATION" in output.read_text(encoding="utf-8")
+
+
+def test_export_cli_rejects_invalid_trajectory_json(tmp_path: Path) -> None:
+    trace = tmp_path / "booking.sftrace"
+    _record_booking(trace)
+    expected = tmp_path / "trajectory.json"
+    expected.write_text('{"unknown": true}', encoding="utf-8")
+    output = tmp_path / "test_regression.py"
+    result = runner.invoke(
+        app,
+        [
+            "export",
+            str(trace),
+            "--entrypoint",
+            FIXED_ENTRYPOINT,
+            "--expect-trajectory",
+            str(expected),
+            "--output",
+            str(output),
+        ],
+    )
+    assert result.exit_code == 2
+    assert "Invalid --expect-trajectory" in result.stdout
+    assert not output.exists()
 
 
 def test_export_cli_protects_existing_output(tmp_path: Path) -> None:

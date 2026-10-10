@@ -1,6 +1,6 @@
 # Examples
 
-Five runnable, fully offline example agents ship in this repository. No API
+Six runnable, fully offline example agents ship in this repository. No API
 keys, no network access: each uses a fake provider that stands in for a real
 model or service, so the demos are deterministic and repeatable.
 
@@ -86,11 +86,28 @@ and the example README for details.
 
 ## What every demo proves
 
-All five demos end with the same assertions:
+The original five demos end with the same assertions:
 
 - the buggy implementation FAILS the generated regression test,
 - the corrected implementation PASSES the same test,
 - frozen replay never executed any external dependency call.
+
+## Model-driven prompt decision
+
+`examples/model_decision` uses a LangGraph workflow and a deterministic fake
+chat provider that makes the final refund decision from its prompt and tool
+results. It records a denial, shows that frozen replay repeats the denial and
+rejects a changed prompt, then runs selected fake-model calls in hybrid replay
+while the tools stay frozen. It exports a failing test for the buggy prompt and
+a passing test for the corrected prompt.
+
+```bash
+uv run python examples/model_decision/demo.py
+```
+
+This tests the replay and assertion mechanism. The fake provider is not
+evidence that a real model would improve with the same prompt change. See
+[the example README](https://github.com/utsab345/stepfork/blob/main/examples/model_decision/README.md).
 
 The demos print real results from real subprocesses; they never fabricate
 output.

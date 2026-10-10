@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import re
 from pathlib import Path
 from typing import Annotated, Any
@@ -53,6 +55,13 @@ def replay_command(
             help="Replay mode: frozen, live, forbidden, manual, or derived.",
         ),
     ] = "frozen",
+    allow_live_tool: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--allow-live-tool",
+            help="Authorize one named tool to execute in live mode; repeat per tool.",
+        ),
+    ] = None,
     verbose: Annotated[
         bool,
         typer.Option("--verbose", help="Show full replay fingerprints."),
@@ -68,6 +77,9 @@ def replay_command(
     except ValueError:
         console.print(f"[red]Invalid replay mode {mode!r}.[/red]")
         raise typer.Exit(2) from None
+    if allow_live_tool and mode != "live":
+        console.print("[red]--allow-live-tool requires --mode live.[/red]")
+        raise typer.Exit(2)
 
     try:
         trace = Trace.load(path)
@@ -88,9 +100,21 @@ def replay_command(
     agent_exc: BaseException | None = None
 
     try:
-        with ReplaySession.from_trace(trace, mode=mode) as replay:
+        with ReplaySession.from_trace(
+            trace,
+            mode=mode,
+            allow_live_tools=set(allow_live_tool) if allow_live_tool else None,
+        ) as replay:
             try:
-                result_value = entry()
+                if inspect.iscoroutinefunction(entry):
+                    result_value = asyncio.run(entry())
+                else:
+                    result_value = entry()
+                    if inspect.isawaitable(result_value):
+                        raise TypeError(
+                            "entrypoint returned an awaitable from a synchronous "
+                            "function; use an async entrypoint"
+                        )
             except RecordedDependencyError as exc:
                 agent_exc = exc
             except ReplayError as exc:
@@ -104,7 +128,7 @@ def replay_command(
                     divergence = _sanitize_text(str(exc))
             matched = replay.matched
             remaining = replay.pending
-    except ReplayError as exc:
+    except (ReplayError, ValueError) as exc:
         console.print("[red]Replay failed before execution.[/red]")
         console.print(_diagnostic(str(exc), verbose=verbose))
         raise typer.Exit(1) from exc

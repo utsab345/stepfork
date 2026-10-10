@@ -183,6 +183,7 @@ Options:
 |---|---|
 | `--entrypoint <str>` | Trusted local `MODULE:FUNCTION` to execute under replay. Required. |
 | `--mode <str>` | Replay mode: `frozen`, `live`, `forbidden`, or `manual`. Default `frozen`. |
+| `--allow-live-tool <name>` | Authorize a named tool to execute in `live` mode. Repeat for each tool. |
 | `--verbose` | Show full diagnostic fingerprints instead of abbreviated ones. |
 | `--help` | Show command help and exit. |
 
@@ -190,7 +191,9 @@ Modes:
 
 - `frozen` answers every dependency call from the recording; mismatches fail
   loudly (recommended for regression work).
-- `live` lets unrecorded calls pass through to the real dependency.
+- `live` re-executes matching LLM calls. Matching tools run only when named by
+  `--allow-live-tool`; other tool calls fail before their bodies run. It does
+  not allow unrecorded calls.
 - `forbidden` rejects any dependency call.
 - `manual` requires approval for each call.
 - `derived` exists in the data model but is not supported in v0.1.
@@ -302,9 +305,11 @@ Options:
 | `--pytest` / `--no-pytest` | Export a pytest test (the only v0.1 format). |
 | `--entrypoint <str>` | Trusted local `MODULE:FUNCTION` the generated test executes. |
 | `--expect-output <path>` | JSON file defining the expected regression outcome. |
+| `--expect-trajectory <path>` | Reviewed JSON file defining tool and step assertions. |
 | `--output <path>` | Destination test file. Default `./test_<trace>_regression.py`. |
 | `--overwrite` | Replace the output file if it already exists. |
 | `--mode <str>` | Replay mode used by the generated test. Default `frozen`. |
+| `--allow-live-tool <name>` | Embed authorization for a named tool in a generated `live` test. Repeat for each tool. |
 | `--help` | Show command help and exit. |
 
 Example:
@@ -341,6 +346,7 @@ Common errors:
 - `An executable regression test needs --entrypoint MODULE:FUNCTION.`
 - `<path> already exists; pass --overwrite to replace it.`
 - `--expect-output is not valid JSON: <detail>`.
+- `Invalid --expect-trajectory: <detail>` when the JSON shape is unsupported.
 
 ---
 

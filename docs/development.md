@@ -17,7 +17,7 @@ uv run pytest --cov=stepfork --cov-branch --cov-report=term-missing
 uv build
 ```
 
-The suite currently has 415 tests and 93% combined statement/branch coverage, including
+The suite currently has 444 tests and 92% combined statement/branch coverage, including
 Hypothesis property tests under `tests/property/`.
 
 Format changed files:

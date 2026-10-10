@@ -52,6 +52,18 @@ class MatchedCall:
 
 
 @dataclass(frozen=True)
+class ExecutedCall:
+    """A dependency boundary reached by the replayed agent, in call order."""
+
+    index: int
+    kind: Literal["tool", "llm"]
+    label: str
+    input: JsonValue
+    status: EventStatus | None
+    action: Literal["substituted", "executed"]
+
+
+@dataclass(frozen=True)
 class ReplayDecision:
     """How the caller should handle the current dependency call."""
 
@@ -79,12 +91,53 @@ class ReplaySession:
             result = run_agent()
     """
 
-    def __init__(self, trace: Trace, *, mode: ReplayPolicy | str) -> None:
+    def __init__(
+        self,
+        trace: Trace,
+        *,
+        mode: ReplayPolicy | str,
+        live_llms: set[str] | frozenset[str] | None = None,
+        allow_live_tools: set[str] | frozenset[str] | None = None,
+    ) -> None:
         self.trace = trace
-        self.mode = ReplayPolicy(mode)
+        self.hybrid = mode == "hybrid"
+        if self.hybrid:
+            if not live_llms:
+                raise ValueError("hybrid replay requires explicit live_llms")
+            self.mode: ReplayPolicy | Literal["hybrid"] = "hybrid"
+        else:
+            if live_llms:
+                raise ValueError("live_llms is only valid with mode='hybrid'")
+            self.mode = ReplayPolicy(mode)
+        self.live_llms = frozenset(live_llms or ())
+        if any(not isinstance(label, str) or not label for label in self.live_llms):
+            raise ValueError("live_llms must contain non-empty provider/model labels")
+        if allow_live_tools is not None and self.mode is not ReplayPolicy.LIVE:
+            raise ValueError("allow_live_tools is only valid with mode='live'")
+        self.allow_live_tools = frozenset(allow_live_tools or ())
+        if any(not isinstance(name, str) or not name for name in self.allow_live_tools):
+            raise ValueError("allow_live_tools must contain non-empty tool names")
         self.calls: list[RecordedCall] = extract_recorded_calls(trace)
+        unknown_tools = self.allow_live_tools - {
+            call.label for call in self.calls if call.kind == "tool"
+        }
+        if unknown_tools:
+            raise ValueError(
+                f"allow_live_tools not found in trace: {sorted(unknown_tools)!r}"
+            )
+        if self.hybrid:
+            available = {call.label for call in self.calls if call.kind == "llm"}
+            unknown = self.live_llms - available
+            if unknown:
+                raise ValueError(f"live_llms not found in trace: {sorted(unknown)!r}")
+        if self.mode is ReplayPolicy.FROZEN or self.hybrid:
+            self.calls = _visible_frozen_calls(
+                trace, self.calls, live_llms=self.live_llms
+            )
         self._cursor = 0
         self._matched: list[MatchedCall] = []
+        self._executed: list[ExecutedCall] = []
+        self._divergence: ReplayError | None = None
         self._token: Token[ReplaySession | None] | None = None
         self._entered = False
 
@@ -94,10 +147,17 @@ class ReplaySession:
         path: str | Path | Trace,
         *,
         mode: ReplayPolicy | str = ReplayPolicy.FROZEN,
+        live_llms: set[str] | frozenset[str] | None = None,
+        allow_live_tools: set[str] | frozenset[str] | None = None,
     ) -> ReplaySession:
         """Build a replay session from a `.sftrace` bundle or loaded trace."""
         trace = path if isinstance(path, Trace) else Trace.load(Path(path))
-        return cls(trace, mode=mode)
+        return cls(
+            trace,
+            mode=mode,
+            live_llms=live_llms,
+            allow_live_tools=allow_live_tools,
+        )
 
     @property
     def matched(self) -> list[MatchedCall]:
@@ -110,10 +170,20 @@ class ReplaySession:
         return len(self.calls) - self._cursor
 
     @property
+    def executed_calls(self) -> tuple[ExecutedCall, ...]:
+        """Calls reached in this execution; never read from the source trace."""
+        return tuple(self._executed)
+
+    @property
+    def divergence(self) -> ReplayError | None:
+        """First replay error, including one caught by the agent."""
+        return self._divergence
+
+    @property
     def summary(self) -> ReplaySummary:
         """Structured summary of the replay session state."""
         return ReplaySummary(
-            mode=self.mode.value,
+            mode="hybrid" if self.hybrid else ReplayPolicy(self.mode).value,
             matched=tuple(self._matched),
             remaining=tuple(call.label for call in self.calls[self._cursor :]),
         )
@@ -137,6 +207,19 @@ class ReplaySession:
         self._entered = False
         return False
 
+    async def __aenter__(self) -> Self:
+        """Enter frozen replay in the current async task."""
+        return self.__enter__()
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> Literal[False]:
+        """Leave frozen replay without suppressing application errors."""
+        return self.__exit__(exc_type, exc, tb)
+
     def before_tool(
         self,
         *,
@@ -144,7 +227,15 @@ class ReplaySession:
         input: JsonValue,
     ) -> ReplayDecision:
         """Match and plan a tool call against the recorded sequence."""
-        return self._dispatch("tool", name=name, model=None, provider=None, input=input)
+        try:
+            return self._dispatch(
+                "tool", name=name, model=None, provider=None, input=input
+            )
+        except RecordedDependencyError:
+            raise
+        except ReplayError as exc:
+            self._divergence = self._divergence or exc
+            raise
 
     def before_llm(
         self,
@@ -154,13 +245,15 @@ class ReplaySession:
         input: JsonValue,
     ) -> ReplayDecision:
         """Match and plan an LLM call against the recorded sequence."""
-        return self._dispatch(
-            "llm",
-            name=None,
-            model=model,
-            provider=provider,
-            input=input,
-        )
+        try:
+            return self._dispatch(
+                "llm", name=None, model=model, provider=provider, input=input
+            )
+        except RecordedDependencyError:
+            raise
+        except ReplayError as exc:
+            self._divergence = self._divergence or exc
+            raise
 
     def verify_complete(self) -> None:
         """Raise if recorded dependency calls remain unconsumed."""
@@ -230,7 +323,12 @@ class ReplaySession:
             provider=provider,
             position=position,
         )
-        self._match_input(expected, input=input, position=position)
+        live_llm = self.hybrid and kind == "llm" and expected.label in self.live_llms
+        self._match_input(
+            expected,
+            input=expected.input if live_llm else input,
+            position=position,
+        )
 
         if expected.policy is ReplayPolicy.FORBIDDEN:
             raise ReplayPolicyError(
@@ -242,22 +340,45 @@ class ReplaySession:
                 "approval before replay"
             )
 
-        if expected.missing:
+        if expected.missing and not live_llm:
             raise ReplayMismatchError(
                 f"no captured result for recorded {kind} call "
                 f"{expected.label!r} at position {position + 1}"
             )
-        self._verify_recorded_output_fingerprint(expected, position=position)
+        if not live_llm:
+            self._verify_recorded_output_fingerprint(expected, position=position)
+
+        if (
+            self.mode is ReplayPolicy.LIVE
+            and kind == "tool"
+            and expected.label not in self.allow_live_tools
+        ):
+            raise ReplayPolicyError(
+                f"live tool {expected.label!r} requires explicit authorization; "
+                f"pass allow_live_tools={{{expected.label!r}}}"
+            )
 
         self._cursor = position + 1
         matched = MatchedCall(
             index=position,
             kind=kind,
             label=expected.label,
-            action="substituted" if self.mode is ReplayPolicy.FROZEN else "executed",
+            action="executed"
+            if live_llm or self.mode is ReplayPolicy.LIVE
+            else "substituted",
+        )
+        self._executed.append(
+            ExecutedCall(
+                index=position,
+                kind=kind,
+                label=expected.label,
+                input=redact_json(input).value,
+                status=expected.status if matched.action == "substituted" else None,
+                action=matched.action,
+            )
         )
 
-        if self.mode is ReplayPolicy.LIVE:
+        if live_llm or self.mode is ReplayPolicy.LIVE:
             self._matched.append(matched)
             return ReplayDecision(execute=True, value=None, matched=matched)
 
@@ -448,3 +569,32 @@ def _call_descriptor(
         f"llm provider={provider!r} model={model!r} "
         f"model_fingerprint={_model_fingerprint(provider, model)}"
     )
+
+
+def _visible_frozen_calls(
+    trace: Trace,
+    calls: list[RecordedCall],
+    *,
+    live_llms: frozenset[str] = frozenset(),
+) -> list[RecordedCall]:
+    """Omit calls inside a frozen dependency body that cannot execute."""
+    parents = {event.id: event.parent_id for event in trace.events}
+    frozen_ids = {
+        call.call_event_id
+        for call in calls
+        if not (call.kind == "llm" and call.label in live_llms)
+    }
+    visible: list[RecordedCall] = []
+    for call in calls:
+        parent = parents.get(call.call_event_id)
+        seen: set[str] = set()
+        nested = False
+        while parent is not None and parent not in seen:
+            if parent in frozen_ids:
+                nested = True
+                break
+            seen.add(parent)
+            parent = parents.get(parent)
+        if not nested:
+            visible.append(call)
+    return visible

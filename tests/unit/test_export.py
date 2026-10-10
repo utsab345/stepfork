@@ -44,6 +44,38 @@ def _record_step(destination: Path) -> None:
         session.set_output(_step_tool("a"))
 
 
+def test_exported_trajectory_expectation_checks_replay(tmp_path: Path) -> None:
+    trace = tmp_path / "step.sftrace"
+    _record_step(trace)
+    _write_targets(tmp_path, package_name="async_targetpkg")
+    output = tmp_path / "test_step_regression.py"
+    source = generate_pytest_source(
+        trace_path=trace,
+        output_path=output,
+        entrypoint="async_targetpkg.targets:call_step_a",
+        trajectory_expectation={"called": ["step"], "max_steps": 1},
+    )
+    compile(source, "<generated>", "exec")
+    assert "TRAJECTORY_EXPECTATION" in source
+
+    with pytest.raises(AssertionError, match="expected tool 'step' not to be called"):
+        run_regression_case(
+            trace_path=trace,
+            import_root=tmp_path,
+            entrypoint="async_targetpkg.targets:call_step_a",
+            has_expectation=False,
+            trajectory_expectation={"not_called": ["step"]},
+        )
+
+    assert run_regression_case(
+        trace_path=trace,
+        import_root=tmp_path,
+        entrypoint="async_targetpkg.targets:call_step_async",
+        expectation={"value": "a"},
+        trajectory_expectation={"called": ["step"]},
+    ) == {"value": "a"}
+
+
 _TARGETS = """
 from stepfork import trace_tool
 
@@ -54,13 +86,19 @@ def step(value: str) -> dict[str, str]:
 def call_step_b(value: str = "b") -> dict[str, str]:
     return step(value)
 
+def call_step_a() -> dict[str, str]:
+    return step("a")
+
+async def call_step_async() -> dict[str, str]:
+    return step("a")
+
 def noop() -> dict[str, object]:
     return {}
 """
 
 
-def _write_targets(directory: Path) -> None:
-    package = directory / "targetpkg"
+def _write_targets(directory: Path, *, package_name: str = "targetpkg") -> None:
+    package = directory / package_name
     package.mkdir(parents=True, exist_ok=True)
     (package / "__init__.py").write_text("", encoding="utf-8")
     (package / "targets.py").write_text(

@@ -12,7 +12,7 @@ pip install "stepfork[langgraph]"
 The adapter translates the two external boundaries of a LangGraph agent into
 Stepfork's provider-independent recording and replay primitives:
 
-- the **chat model** boundary (`BaseChatModel._generate`), and
+- the **chat model** boundary (`BaseChatModel._generate` or `_agenerate`), and
 - the **tool** boundary (a plain function or an existing `BaseTool`).
 
 Everything else — graph compilation, checkpointers, routing, and node logic —
@@ -25,7 +25,7 @@ monkeypatches, so agent behavior outside a `record(...)` or `ReplaySession`
 context is identical to stock LangGraph.
 
 - `traced_chat_model(model)` returns the **same** model instance with its
-  synchronous `_generate` wrapped. Each call is recorded as an `llm_request`;
+  synchronous and asynchronous generation wrapped. Each call is recorded as an `llm_request`;
   during frozen replay the recorded `ChatResult` is returned and the model is
   not called. Because only the instance method is wrapped, `bind_tools` and
   `bind` keep working and the tracing carries through the runnable they return.
@@ -122,16 +122,13 @@ agent and passes for the fixed one. No API keys and no network calls.
 
 Captured:
 
-- synchronous chat-model generation (`invoke` / `_generate`),
+- synchronous and asynchronous chat-model generation (`invoke` / `ainvoke`),
 - tool execution for tools created with `traced_tool`,
 - the agent's final output,
 - exceptions raised inside traced boundaries.
 
 Not captured:
 
-- asynchronous model invocation (`ainvoke` / `_agenerate`) — attempted inside a
-  Stepfork context, it raises a clear error rather than silently bypassing the
-  recording,
 - streaming responses,
 - retrieval/vector-store calls, checkpointers, or any other dependency you did
   not wrap,
@@ -158,10 +155,8 @@ traced payload.
 - **`ModuleNotFoundError: ... requires the optional 'langgraph' extra`** —
   install `pip install "stepfork[langgraph]"`. The core package intentionally
   does not depend on LangGraph.
-- **`LangGraphIntegrationError: ... supports synchronous invocation only`** —
-  the agent called `ainvoke` while inside `record(...)` or a replay session.
-  Use the synchronous graph API, or leave the async path untraced and out of
-  the recorded entrypoint.
+- **`LangGraphIntegrationError: streaming ... not supported`** — use `invoke`
+  or `ainvoke` for a non-streaming recorded boundary.
 - **`ReplayMismatchError: ... input diverged from the recording`** — the model
   received different messages, a different prompt, or a different tool schema
   than when recorded. Re-check the change that produced the difference; if it

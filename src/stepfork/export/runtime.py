@@ -7,8 +7,11 @@ ever derived from trace payloads.
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 from pathlib import Path
 
+from stepfork.assertions import assert_trajectory
 from stepfork.diff.compare import first_difference
 from stepfork.export.entrypoint import EntrypointError, resolve_entrypoint
 from stepfork.replay import (
@@ -36,7 +39,10 @@ def run_regression_case(
     entrypoint: str,
     expectation: JsonValue | None = None,
     has_expectation: bool = True,
+    trajectory_expectation: JsonValue | None = None,
     mode: str = "frozen",
+    live_llms: set[str] | frozenset[str] | None = None,
+    allow_live_tools: set[str] | frozenset[str] | None = None,
 ) -> JsonValue:
     """Replay a trusted entrypoint and assert the expected behavior.
 
@@ -57,9 +63,22 @@ def run_regression_case(
     except EntrypointError as exc:
         raise AssertionError(f"stepfork: entrypoint failed: {exc}") from exc
 
-    with ReplaySession.from_trace(recorded, mode=mode) as replay:
+    with ReplaySession.from_trace(
+        recorded,
+        mode=mode,
+        live_llms=live_llms,
+        allow_live_tools=allow_live_tools,
+    ) as replay:
         try:
-            actual = entry()
+            if inspect.iscoroutinefunction(entry):
+                actual = asyncio.run(entry())
+            else:
+                actual = entry()
+                if inspect.isawaitable(actual):
+                    raise AssertionError(
+                        "stepfork: entrypoint returned an awaitable from a "
+                        "synchronous function; use an async entrypoint"
+                    )
         except ReplayMismatchError as exc:
             raise AssertionError(f"stepfork replay divergence: {exc}") from exc
         except ReplayPolicyError as exc:
@@ -68,6 +87,10 @@ def run_regression_case(
             replay.verify_complete()
         except ReplayError as exc:
             raise AssertionError(f"stepfork replay divergence: {exc}") from exc
+        if replay.divergence is not None:
+            raise AssertionError(f"stepfork replay divergence: {replay.divergence}")
+        if trajectory_expectation is not None:
+            assert_trajectory(replay, trajectory_expectation)
 
     try:
         actual_json = to_json_value(actual)

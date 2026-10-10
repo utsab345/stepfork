@@ -12,6 +12,7 @@ import pprint
 import re
 from pathlib import Path
 
+from stepfork.assertions import validate_trajectory_expectation
 from stepfork.trace import JsonValue
 from stepfork.trace.redaction import redact_json
 from stepfork.version import __version__
@@ -41,8 +42,11 @@ TRACE_PATH = {trace_expr}
 IMPORT_ROOT = {import_root_expr}
 ENTRYPOINT = {entrypoint_literal}
 MODE = {mode_literal}
+LIVE_LLMS = {live_llms_literal}
+ALLOW_LIVE_TOOLS = {allow_live_tools_literal}
 EXPECTATION = {expectation_literal}
 HAS_EXPECTATION = {has_expectation_literal}
+TRAJECTORY_EXPECTATION = {trajectory_expectation_literal}
 
 
 def {function_name}() -> None:
@@ -53,7 +57,10 @@ def {function_name}() -> None:
         entrypoint=ENTRYPOINT,
         expectation=EXPECTATION,
         has_expectation=HAS_EXPECTATION,
+        trajectory_expectation=TRAJECTORY_EXPECTATION,
         mode=MODE,
+        live_llms=LIVE_LLMS,
+        allow_live_tools=ALLOW_LIVE_TOOLS,
     )
 '''
 
@@ -73,11 +80,26 @@ def generate_pytest_source(
     entrypoint: str,
     expectation: JsonValue | None = None,
     has_expectation: bool = True,
+    trajectory_expectation: JsonValue | None = None,
     mode: str = "frozen",
+    live_llms: set[str] | frozenset[str] | None = None,
+    allow_live_tools: set[str] | frozenset[str] | None = None,
     import_root: Path | None = None,
 ) -> str:
     """Return the source code for a pytest regression test."""
     trace = trace_path.resolve()
+    if trajectory_expectation is not None:
+        validate_trajectory_expectation(trajectory_expectation)
+    if mode == "hybrid" and not live_llms:
+        raise ExportError("hybrid export requires explicit live_llms")
+    if mode != "hybrid" and live_llms:
+        raise ExportError("live_llms is only valid with mode='hybrid'")
+    if allow_live_tools is not None and mode != "live":
+        raise ExportError("allow_live_tools is only valid with mode='live'")
+    if allow_live_tools and any(
+        not isinstance(name, str) or not name for name in allow_live_tools
+    ):
+        raise ExportError("allow_live_tools must contain non-empty tool names")
     root = (import_root if import_root is not None else Path.cwd()).resolve()
 
     return TEMPLATE.format(
@@ -89,12 +111,25 @@ def generate_pytest_source(
         import_root_expr=_path_expression(root, output_path),
         entrypoint_literal=repr(entrypoint),
         mode_literal=repr(mode),
+        live_llms_literal=(
+            f"set({sorted(live_llms)!r})" if live_llms is not None else "None"
+        ),
+        allow_live_tools_literal=(
+            f"set({sorted(allow_live_tools)!r})"
+            if allow_live_tools is not None
+            else "None"
+        ),
         expectation_literal=pprint.pformat(
             redact_json(expectation).value if has_expectation else None,
             width=88,
             sort_dicts=True,
         ),
         has_expectation_literal=repr(has_expectation),
+        trajectory_expectation_literal=pprint.pformat(
+            redact_json(trajectory_expectation).value,
+            width=88,
+            sort_dicts=True,
+        ),
         function_name=_test_function_name(trace),
     )
 
@@ -106,7 +141,10 @@ def export_pytest_test(
     entrypoint: str,
     expectation: JsonValue | None = None,
     has_expectation: bool = True,
+    trajectory_expectation: JsonValue | None = None,
     mode: str = "frozen",
+    live_llms: set[str] | frozenset[str] | None = None,
+    allow_live_tools: set[str] | frozenset[str] | None = None,
     import_root: Path | None = None,
     overwrite: bool = False,
 ) -> Path:
@@ -124,7 +162,10 @@ def export_pytest_test(
         entrypoint=entrypoint,
         expectation=expectation,
         has_expectation=has_expectation,
+        trajectory_expectation=trajectory_expectation,
         mode=mode,
+        live_llms=live_llms,
+        allow_live_tools=allow_live_tools,
         import_root=import_root,
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)

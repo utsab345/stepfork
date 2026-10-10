@@ -9,6 +9,7 @@ from stepfork.replay.exceptions import (
 )
 from stepfork.replay.plan import RecordedCall, extract_recorded_calls
 from stepfork.replay.session import (
+    ExecutedCall,
     MatchedCall,
     ReplayDecision,
     ReplaySession,
@@ -17,6 +18,7 @@ from stepfork.replay.session import (
 )
 
 __all__ = [
+    "ExecutedCall",
     "MatchedCall",
     "RecordedCall",
     "RecordedDependencyError",

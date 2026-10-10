@@ -53,6 +53,8 @@ def trace_tool(
     """
 
     def decorate(target: Callable[P, R]) -> Callable[P, R]:
+        if inspect.isgeneratorfunction(target) or inspect.isasyncgenfunction(target):
+            raise ValueError("streaming tool functions are not supported by trace_tool")
         tool_name = name if name is not None else target.__name__
         if inspect.iscoroutinefunction(target):
 

@@ -43,6 +43,7 @@ def search_flights(destination: str) -> dict:
 - During frozen replay the function body is **not** executed; the captured
   result is returned instead.
 - Both synchronous and `async def` tools are supported.
+- Generator and async-generator tools are rejected; streaming is unsupported.
 - Signature binding is used so inputs are recorded by parameter name; the
   binding is stored as JSON.
 
@@ -77,6 +78,25 @@ response = llm_request(
 `llm_request` is the replay-safe wrapper. Prefer it over calling the provider
 directly. The lower-level `session.llm_call(...)` context manager exists for
 manual instrumentation, but it does not substitute during replay.
+
+For async agents, use `async with record(...)` and `await allm_request(...)`:
+
+```python
+from stepfork import allm_request, record
+
+async with record("agent", output="run.sftrace") as session:
+    response = await allm_request(
+        provider="fake", model="demo", input={"messages": messages},
+        call=lambda: async_client.create(messages),
+    )
+    session.set_output(response)
+```
+
+`async with` writes the bundle without blocking the event loop on disk I/O.
+Parent scopes are task-local, so concurrent child tasks keep their own parent
+links. Event order records the order in which boundaries are reached. A replay
+uses that same strict order; concurrent scheduling changes can cause a
+`ReplayMismatchError`. Stepfork does not guarantee deterministic scheduling.
 
 ## Serialization
 

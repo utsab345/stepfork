@@ -110,6 +110,19 @@ def test_async_tool_passthrough() -> None:
     assert asyncio.run(async_add(6, 7)) == 13
 
 
+def test_streaming_tools_are_rejected_explicitly() -> None:
+    def stream() -> object:
+        yield "chunk"
+
+    async def astream() -> object:
+        yield "chunk"
+
+    with pytest.raises(ValueError, match="streaming tool"):
+        trace_tool(stream)
+    with pytest.raises(ValueError, match="streaming tool"):
+        trace_tool(astream)
+
+
 def test_tool_result_redaction_removes_secret(tmp_path: Path) -> None:
     @trace_tool
     def leak() -> dict[str, str]:

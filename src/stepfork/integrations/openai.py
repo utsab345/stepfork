@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any, TypeAlias, cast
 
-from stepfork.recorder import llm_request
+from stepfork.recorder import allm_request, llm_request
 from stepfork.trace import JsonValue, ReplayPolicy
 from stepfork.trace.jsonable import TraceSerializationError, to_json_value
 
@@ -56,6 +56,50 @@ def chat_completions_create(
             replay_policy=replay_policy,
         ),
     )
+
+
+async def achat_completions_create(
+    client: Any,
+    /,
+    *,
+    replay_policy: ReplayPolicy = ReplayPolicy.FROZEN,
+    **request: Any,
+) -> JsonObject:
+    """Async non-streaming OpenAI-style chat completion boundary."""
+    normalized = _normalize_chat_request(request)
+    model = _required_model(normalized)
+    return cast(
+        JsonObject,
+        await allm_request(
+            provider=PROVIDER,
+            model=model,
+            input={"method": CHAT_COMPLETIONS_METHOD, "request": normalized},
+            call=lambda: _acall_chat_completions(client, request),
+            replay_policy=replay_policy,
+        ),
+    )
+
+
+async def _acall_chat_completions(client: Any, request: dict[str, Any]) -> JsonObject:
+    try:
+        create = client.chat.completions.create
+    except AttributeError as exc:
+        raise OpenAIIntegrationError(
+            "client must expose chat.completions.create"
+        ) from exc
+    response = await create(**request)
+    try:
+        payload = _json_payload(response)
+    except TraceSerializationError as exc:
+        raise OpenAIIntegrationError(
+            "OpenAI chat completion response must be JSON-compatible for "
+            "Stepfork replay"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise OpenAIIntegrationError(
+            "OpenAI chat completion response must serialize to a JSON object"
+        )
+    return payload
 
 
 def _normalize_chat_request(request: dict[str, Any]) -> JsonObject:
@@ -122,5 +166,6 @@ def _json_payload(value: Any) -> JsonValue:
 __all__ = [
     "CHAT_COMPLETIONS_METHOD",
     "OpenAIIntegrationError",
+    "achat_completions_create",
     "chat_completions_create",
 ]

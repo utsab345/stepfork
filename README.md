@@ -68,6 +68,33 @@ Compare → Define Expected Behavior → Export pytest → Verify Fix
 - **Integrity verification** via SHA-256 digests that make tampering evident.
 - **Python 3.11, 3.12, and 3.13** support.
 
+## What a replay can establish
+
+| Failure class | Frozen replay | Hybrid replay with a selected live LLM |
+| --- | --- | --- |
+| Deterministic application logic | Reproduces with recorded dependencies | Can test against reviewed output |
+| Tool-result parsing | Reproduces with recorded tool output | Same if the tool remains frozen |
+| Tool arguments and orchestration | Strictly matches recorded calls; trajectory assertions check execution | New tool calls diverge before instrumented tool bodies run |
+| Model judgment | Repeats the recorded answer only | Re-runs the selected model; outcome is variable |
+| Prompt-change evaluation | Rejects a changed prompt as divergence | Allows the selected LLM prompt to change and checks reviewed expectations |
+| Uninstrumented side effects | Not intercepted | Not intercepted |
+| Nondeterministic execution | May diverge when call order changes | May diverge; model output is also variable |
+
+**Frozen replay** substitutes recorded dependency responses and tests the
+application logic around them. It cannot prove that a prompt improves model
+quality. **Hybrid replay** explicitly selects LLM boundaries to run again while
+tools stay frozen and strictly matched. It is not deterministic and may incur
+network calls, token cost, and latency. **Live evaluation** means assessing a
+new model response against reviewed output and trajectory expectations; it is a
+testing practice using the hybrid API, not a separate replay mode. See
+[hybrid replay](docs/hybrid.md).
+
+The existing `mode="live"` re-executes matching LLM calls. Live tool bodies
+now require explicit authorization by name with `allow_live_tools={...}` or
+`--allow-live-tool NAME`. An authorized tool can send email, charge a card, or
+change an external system; the allowlist does not sandbox it. See
+[live-tool authorization](docs/replay.md#modes) for migration guidance.
+
 ## Installation
 
 Stepfork is published on PyPI. Install the current alpha with:
@@ -211,7 +238,7 @@ minimal example agent:
 
 ![Stepfork terminal demo](scripts/terminal-demo/stepfork-demo.gif)
 
-Five runnable demo agents ship in this repository (all fully offline, with a
+Six runnable demo agents ship in this repository (all fully offline, with a
 fake provider standing in for a real model):
 
 - `examples/quickstart` - a single-tool order-notification agent; the minimal
@@ -224,6 +251,8 @@ fake provider standing in for a real model):
   fake OpenAI-shaped sync client; no API key or network call required.
 - `examples/langgraph_agent` - a real LangGraph `StateGraph` traced through the
   optional LangGraph adapter; makes a wrong refund decision.
+- `examples/model_decision` - a LangGraph model-decision failure tested with
+  hybrid replay and a deterministic fake provider.
 
 ```bash
 git clone https://github.com/utsab345/stepfork.git
@@ -234,11 +263,12 @@ uv run python examples/booking_agent/demo.py
 uv run python examples/refund_agent/demo.py
 uv run python examples/openai_chat/demo.py
 uv run python examples/langgraph_agent/demo.py
+uv run python examples/model_decision/demo.py
 ```
 
-Each demo records the buggy run, freeze-replays it without touching the
-external dependency body, diffs it against the corrected run, and exports a
-regression test that fails on the buggy entrypoint and passes on the fixed one.
+Each demo records a buggy run and exports a regression test that fails on the
+buggy entrypoint and passes on the fixed one. The model-decision example also
+shows the limit of frozen replay and a selected live LLM in hybrid replay.
 The demos print real results from real subprocesses; they never fabricate
 output.
 
@@ -250,7 +280,7 @@ output.
 | `stepfork inspect [PATH] [--json] [--events] [--errors-only] [--step N]` | Review a bundle locally. |
 | `stepfork replay [PATH] --entrypoint MODULE:FUNCTION [--mode M]` | Rerun the entrypoint with dependencies answered from the trace. |
 | `stepfork diff [BASELINE] [CANDIDATE] [--json]` | Compare the behavior of two runs. |
-| `stepfork export [PATH] --pytest --entrypoint MODULE:FUNCTION [--expect-output JSON] [--output FILE] [--overwrite]` | Generate an executable pytest regression test. |
+| `stepfork export [PATH] --pytest --entrypoint MODULE:FUNCTION [--expect-output JSON] [--expect-trajectory JSON] [--output FILE] [--overwrite]` | Generate an executable pytest regression test. |
 
 The full reference (arguments, examples, expected output, and common errors)
 is in [docs/cli.md](docs/cli.md).
@@ -316,15 +346,16 @@ before v1.0.
   recorded steps. Reducing it to the smallest failing subset and fork-at-step
   are planned work, not automatic behavior.
 - **Limited integrations.** Optional adapters cover the OpenAI Python SDK
-  (synchronous, non-streaming `chat.completions.create`) and LangGraph
-  (synchronous `BaseChatModel` generation and function-based tools). OpenAI
-  Agents, MCP, streaming, async, and other providers are planned work. See
+  (synchronous and asynchronous, non-streaming `chat.completions.create`) and
+  LangGraph (synchronous and asynchronous `BaseChatModel` generation and
+  function-based tools). OpenAI Agents, MCP, streaming, and other providers
+  are planned work. See
   [docs/integrations.md](docs/integrations.md).
 - **Replay is not a sandbox.** Running an entrypoint under replay executes
   your own code with your own privileges. Trace data is never executed, but
   the entrypoint you name is.
 - **Only instrumented boundaries are frozen.** Frozen replay substitutes calls
-  made through `@trace_tool` and `llm_request`. Any external call your code
+  made through `@trace_tool`, `llm_request`, and `allm_request`. Any external call your code
   makes outside those boundaries is not recorded and is not intercepted.
 - **Redaction is best-effort.** Pattern-based redaction can miss sensitive
   information embedded in unusual tool outputs or domain-specific payloads.

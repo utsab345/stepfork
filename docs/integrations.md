@@ -32,15 +32,16 @@ This mirrors an adapter pattern with three layers:
 
 ### LangGraph
 
-- Implemented for synchronous chat-model generation and function-based tools.
-  `traced_chat_model` wraps a `BaseChatModel` instance's `_generate`;
+- Implemented for synchronous and asynchronous chat-model generation and
+  function-based tools. `traced_chat_model` wraps a `BaseChatModel` instance's
+  `_generate` and `_agenerate`;
   `traced_tool` wraps a function (or an existing `BaseTool` with a `func`) and
   records its body. Both are explicit and instance-scoped; no global
   monkeypatching.
 - Replay is frozen: the model and tool bodies are not executed, and recorded
   responses are returned from the `Trace`.
-- Captures the model boundary and wrapped tools only. Async invocation,
-  streaming, and unwrapped dependencies are surfaced rather than masked.
+- Captures the model boundary and wrapped tools only. Streaming and unwrapped
+  dependencies are surfaced rather than masked.
 - Install with `stepfork[langgraph]`.
 - See [LangGraph](langgraph.md).
 
@@ -55,10 +56,12 @@ This mirrors an adapter pattern with three layers:
 
 ### OpenAI Python SDK
 
-- Implemented for synchronous, non-streaming `chat.completions.create`.
-- Uses the core `llm_request` boundary and does not change the trace format.
+- Implemented for synchronous and asynchronous, non-streaming
+  `chat.completions.create`.
+- Uses the core `llm_request` or `allm_request` boundary and does not change
+  the trace format.
 - Install with `stepfork[openai]` when using the real SDK.
-- Status: minimal adapter implemented; streaming, async, Responses API, and
+- Status: minimal adapter implemented; streaming, Responses API, and
   automatic monkeypatching are future work.
 
 ### MCP

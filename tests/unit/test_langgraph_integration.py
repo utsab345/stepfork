@@ -206,16 +206,39 @@ def test_malformed_llm_response_is_reported(tmp_path: Path) -> None:
         _invoke(traced_chat_model(_model(responses=["unused"])))
 
 
-def test_async_invocation_is_rejected_inside_context(tmp_path: Path) -> None:
+def test_async_invocation_records_and_replays(tmp_path: Path) -> None:
     path = tmp_path / "llm.sftrace"
-    model = traced_chat_model(_model(responses=["async"]))
+    source_model = _model(responses=["async"])
+    model = traced_chat_model(source_model)
 
     async def run() -> None:
-        with record("llm-agent", output=path):
-            await model.ainvoke([HumanMessage(content="hi")])
+        async with record("llm-agent", output=path):
+            result = await model.ainvoke([HumanMessage(content="hi")])
+            assert result.content == "async"
+        async with ReplaySession.from_trace(path) as replay:
+            result = await model.ainvoke([HumanMessage(content="hi")])
+            replay.verify_complete()
+            assert result.content == "async"
 
-    with pytest.raises(LangGraphIntegrationError, match="synchronous"):
-        asyncio.run(run())
+    asyncio.run(run())
+    assert len(source_model.calls) == 1
+
+
+def test_streaming_model_is_rejected_inside_recording(tmp_path: Path) -> None:
+    model = traced_chat_model(_model(responses=["chunk"]))
+    with (
+        record("stream", output=tmp_path / "stream.sftrace"),
+        pytest.raises(LangGraphIntegrationError, match="streaming"),
+    ):
+        list(model.stream([HumanMessage(content="hi")]))
+
+    async def scenario() -> None:
+        async with record("astream", output=tmp_path / "astream.sftrace"):
+            with pytest.raises(LangGraphIntegrationError, match="streaming"):
+                async for _ in model.astream([HumanMessage(content="hi")]):
+                    pass
+
+    asyncio.run(scenario())
 
 
 def test_traced_tool_records_and_replays(tmp_path: Path) -> None:

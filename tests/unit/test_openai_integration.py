@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Any, cast
 
@@ -9,6 +10,7 @@ from stepfork import ReplaySession, Trace, record
 from stepfork.integrations.openai import (
     CHAT_COMPLETIONS_METHOD,
     OpenAIIntegrationError,
+    achat_completions_create,
     chat_completions_create,
 )
 from stepfork.replay import (
@@ -308,3 +310,36 @@ def test_model_is_required() -> None:
             FakeOpenAI(),
             messages=[{"role": "user", "content": "hello"}],
         )
+
+
+def test_async_openai_boundary_records_and_replays(tmp_path: Path) -> None:
+    path = tmp_path / "async-openai.sftrace"
+
+    class AsyncCompletions:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def create(self, **request: Any) -> FakeChatCompletion:
+            self.calls += 1
+            await asyncio.sleep(0)
+            return FakeChatCompletion(content="hello")
+
+    class AsyncClient:
+        def __init__(self) -> None:
+            self.chat = type("Chat", (), {"completions": AsyncCompletions()})()
+
+    client = AsyncClient()
+
+    async def scenario() -> None:
+        async with record("async-openai", output=path):
+            result = await achat_completions_create(client, **_request())
+            assert result["choices"][0]["message"]["content"] == "hello"  # type: ignore[index]
+        async with ReplaySession.from_trace(path) as replay:
+            result = await achat_completions_create(client, **_request())
+            replay.verify_complete()
+            assert result["choices"][0]["message"]["content"] == "hello"  # type: ignore[index]
+        assert client.chat.completions.calls == 1
+        with pytest.raises(OpenAIIntegrationError, match="streaming"):
+            await achat_completions_create(client, **_request(), stream=True)
+
+    asyncio.run(scenario())

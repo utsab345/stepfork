@@ -1,7 +1,13 @@
 """Stepfork: behavioral regression testing for AI agents."""
 
 from stepfork.diff import diff_traces
-from stepfork.recorder import RecordingSession, llm_request, record, trace_tool
+from stepfork.recorder import (
+    RecordingSession,
+    allm_request,
+    llm_request,
+    record,
+    trace_tool,
+)
 from stepfork.replay import (
     RecordedDependencyError,
     ReplayError,
@@ -25,6 +31,7 @@ __all__ = [
     "ToolCall",
     "Trace",
     "__version__",
+    "allm_request",
     "diff_traces",
     "llm_request",
     "record",

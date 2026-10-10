@@ -23,6 +23,7 @@ nav:
   - Guide:
       - recording.md
       - replay.md
+      - hybrid.md
       - diff.md
       - pytest-export.md
       - openai.md

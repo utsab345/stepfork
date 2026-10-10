@@ -11,7 +11,7 @@ pip install "stepfork[openai]"
 The official OpenAI documentation shows the Python SDK using an `OpenAI`
 client object, and the Chat Completions API reference documents
 `chat.completions.create` for Python. Stepfork's first adapter supports that
-synchronous, non-streaming call only.
+synchronous and asynchronous non-streaming calls only.
 
 ## Supported API
 
@@ -34,6 +34,10 @@ response = chat_completions_create(
 ```python
 client.chat.completions.create(**request)
 ```
+
+For an async client, use `await achat_completions_create(client, **request)`
+inside `async with record(...)`. It uses the same trace schema and frozen
+matching rules.
 
 When used inside `stepfork.record`, Stepfork records an `llm_request` with:
 
@@ -86,7 +90,6 @@ responsible for configuring credentials through the SDK's normal mechanisms.
 Not supported in this first iteration:
 
 - streaming responses (`stream=True`)
-- async clients
 - Responses API
 - OpenAI Agents SDK
 - automatic monkeypatching of existing SDK clients

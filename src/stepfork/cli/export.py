@@ -10,6 +10,7 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
+from stepfork.assertions import validate_trajectory_expectation
 from stepfork.export.entrypoint import EntrypointError, resolve_entrypoint
 from stepfork.export.generator import (
     ExportError,
@@ -67,6 +68,13 @@ def export_command(
             help="JSON file defining the expected regression outcome.",
         ),
     ] = None,
+    expect_trajectory: Annotated[
+        Path | None,
+        typer.Option(
+            "--expect-trajectory",
+            help="Reviewed JSON file with tool and step expectations.",
+        ),
+    ] = None,
     output: Annotated[
         Path | None,
         typer.Option(
@@ -88,6 +96,13 @@ def export_command(
             help="Replay mode used by the generated test (frozen recommended).",
         ),
     ] = "frozen",
+    allow_live_tool: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--allow-live-tool",
+            help="Authorize one named tool in exported live mode; repeat per tool.",
+        ),
+    ] = None,
 ) -> None:
     """Export an executable pytest regression test from a trace.
 
@@ -104,6 +119,9 @@ def export_command(
     except ValueError:
         console.print(f"[red]Invalid replay mode {mode!r}.[/red]")
         raise typer.Exit(2) from None
+    if allow_live_tool and mode != "live":
+        console.print("[red]--allow-live-tool requires --mode live.[/red]")
+        raise typer.Exit(2)
 
     if entrypoint is None:
         console.print(
@@ -142,6 +160,16 @@ def export_command(
         has_expectation = expectation is not None
         warning = RECORDED_OUTPUT_WARNING
 
+    trajectory_expectation = (
+        _load_expectation(expect_trajectory) if expect_trajectory is not None else None
+    )
+    if trajectory_expectation is not None:
+        try:
+            validate_trajectory_expectation(trajectory_expectation)
+        except ValueError as exc:
+            console.print(f"[red]Invalid --expect-trajectory:[/red] {exc}")
+            raise typer.Exit(2) from exc
+
     destination = output or Path(f"test_{_safe_stem(path)}_regression.py")
     if destination.exists() and not overwrite:
         console.print(
@@ -156,7 +184,9 @@ def export_command(
             entrypoint=entrypoint,
             expectation=expectation,
             has_expectation=has_expectation,
+            trajectory_expectation=trajectory_expectation,
             mode=mode,
+            allow_live_tools=set(allow_live_tool) if allow_live_tool else None,
             import_root=Path.cwd(),
             overwrite=overwrite,
         )
@@ -176,6 +206,8 @@ def export_command(
         console.print(f"Expectation: {_sanitize_text(json.dumps(expectation))}")
     else:
         console.print("Expectation: none (replay fidelity only)")
+    if trajectory_expectation is not None:
+        console.print("Trajectory: reviewed JSON expectation")
     raise typer.Exit(0)
 
 

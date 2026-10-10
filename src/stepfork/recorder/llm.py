@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from stepfork.recorder.session import active_recorder
@@ -59,6 +59,43 @@ def llm_request(
     session.push_scope(request.id)
     try:
         output = call()
+    except BaseException as exc:
+        session.record_llm_failure(request, exc)
+        raise
+    finally:
+        session.pop_scope()
+    session.record_llm_response(request, output, model=model)
+    return output
+
+
+async def allm_request(
+    *,
+    model: str,
+    input: Any,
+    call: Callable[[], Awaitable[Any]],
+    provider: str | None = None,
+    replay_policy: ReplayPolicy = ReplayPolicy.FROZEN,
+    serializer: Serializer | None = None,
+) -> Any:
+    """Async LLM boundary with the same strict frozen matching as ``llm_request``."""
+    replay = active_replay()
+    if replay is not None:
+        input_json = to_json_value(input, serializer=serializer)
+        decision = replay.before_llm(provider=provider, model=model, input=input_json)
+        if not decision.execute:
+            return decision.value
+        return await call()
+
+    session = active_recorder()
+    if session is None:
+        return await call()
+
+    request = session.record_llm_request(
+        model=model, input=input, provider=provider, replay_policy=replay_policy
+    )
+    session.push_scope(request.id)
+    try:
+        output = await call()
     except BaseException as exc:
         session.record_llm_failure(request, exc)
         raise

@@ -42,11 +42,38 @@ approval before exporting a regression assertion.
 - `--entrypoint MODULE:FUNCTION`: required; the trusted local callable the test
   executes.
 - `--expect-output PATH`: JSON file with the expected outcome.
+- `--expect-trajectory PATH`: reviewed JSON file with tool and step assertions.
 - `--output PATH`: destination file (default `test_<trace>_regression.py`).
 - `--overwrite`: replace an existing destination.
 - `--mode`: replay mode used by the generated test (`frozen` recommended).
+- `--allow-live-tool NAME`: in `live` mode, embed explicit authorization for
+  each named tool that the generated test may execute. Review these names and
+  their side effects before running the test.
 
 The trace must pass strict validation before export.
+
+Trajectory expectations use this JSON shape:
+
+```json
+{
+  "called": ["search_flights"],
+  "not_called": ["charge_card"],
+  "counts": {"search_flights": 1},
+  "arguments": [{"name": "search_flights", "value": {"city": "Paris"}, "occurrence": 1}],
+  "order": [["search_flights", "book_flight"]],
+  "sequence": ["search_flights", "book_flight"],
+  "strict_sequence": true,
+  "max_steps": 4
+}
+```
+
+`sequence` is exact by default. Set `strict_sequence` to `false` for an ordered
+subsequence. An argument expectation without `occurrence` matches any call to
+that tool; occurrence numbers start at 1. Failed recorded tool calls count.
+`max_steps` counts instrumented tool and LLM calls. These assertions inspect
+calls made by the replayed entrypoint, and reject incomplete or divergent
+replay. Review this JSON separately from the recorded trace; a trace is not an
+approved expectation. The export command validates the shape before writing.
 
 Running the generated file requires `pytest`, an installed `stepfork` package,
 an importable trusted entrypoint and its dependencies, and the referenced
@@ -69,6 +96,7 @@ TRACE_PATH = ...
 ENTRYPOINT = "examples.booking_agent:run_agent"
 EXPECTATION = {"destination": "Lisbon", "selected_flight": "B", ...}
 HAS_EXPECTATION = True
+TRAJECTORY_EXPECTATION = {"called": ["search_flights"]}
 
 
 def test_stepfork_regression_failure() -> None:

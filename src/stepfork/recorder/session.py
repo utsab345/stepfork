@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 import sys
 from collections.abc import Iterator
@@ -88,7 +89,10 @@ class RecordingSession:
             else _default_output_path(agent_name, self.trace.run_id)
         )
         self._overwrite = overwrite
-        self._stack: list[str] = []
+        self._scope: ContextVar[tuple[str, ...]] = ContextVar(
+            f"stepfork_recording_scope_{self.trace.run_id}", default=()
+        )
+        self._scope_token: Token[tuple[str, ...]] | None = None
         self._token: Token[RecordingSession | None] | None = None
         self._started = False
         self._finished = False
@@ -126,7 +130,7 @@ class RecordingSession:
                 # Frozen replay: agent entrypoints keep their record() blocks.
                 # Stay inert so replay never writes a new trace bundle.
                 self._inert = True
-                self._stack = []
+                self._scope_token = self._scope.set(())
                 self._token = token
                 return self
             if self._run_input is None:
@@ -136,7 +140,7 @@ class RecordingSession:
         except BaseException:
             _current_recorder.reset(token)
             raise
-        self._stack = [start.id]
+        self._scope_token = self._scope.set((start.id,))
         self._token = token
         return self
 
@@ -150,8 +154,8 @@ class RecordingSession:
             if self._inert:
                 return False
             if not self._finished:
-                self._finished = True
                 self._finalize(exc)
+                self._finished = True
                 self.path = save_trace(
                     self.trace,
                     self._output_path,
@@ -165,21 +169,56 @@ class RecordingSession:
             if self._token is not None:
                 _current_recorder.reset(self._token)
                 self._token = None
+            if self._scope_token is not None:
+                self._scope.reset(self._scope_token)
+                self._scope_token = None
+        return False
+
+    async def __aenter__(self) -> RecordingSession:
+        """Enter a recording in the current async task."""
+        return self.__enter__()
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> Literal[False]:
+        """Persist the trace without blocking the event loop on disk I/O."""
+        try:
+            if not self._inert and not self._finished:
+                self._finalize(exc)
+                self._finished = True
+                self.path = await asyncio.to_thread(
+                    save_trace, self.trace, self._output_path, overwrite=self._overwrite
+                )
+        except Exception as save_error:
+            if exc is None:
+                raise
+            exc.add_note(f"stepfork: trace was not saved: {save_error}")
+        finally:
+            if self._token is not None:
+                _current_recorder.reset(self._token)
+                self._token = None
+            if self._scope_token is not None:
+                self._scope.reset(self._scope_token)
+                self._scope_token = None
         return False
 
     def push_scope(self, event_id: str) -> None:
         """Make ``event_id`` the parent scope for subsequently recorded events."""
         if self._inert:
             return
-        self._stack.append(event_id)
+        self._scope.set((*self._scope.get(), event_id))
 
     def pop_scope(self) -> None:
         """Leave the current dependency scope."""
         if self._inert:
             return
-        if len(self._stack) <= 1:
+        stack = self._scope.get()
+        if len(stack) <= 1:
             raise RuntimeError("cannot leave the root recording scope")
-        self._stack.pop()
+        self._scope.set(stack[:-1])
 
     def record_llm_request(
         self,
@@ -366,8 +405,11 @@ class RecordingSession:
         )
 
     def _append(self, event: E) -> E:
-        if event.parent_id is None and self._stack:
-            event = event.model_copy(update={"parent_id": self._stack[-1]})
+        if self._finished:
+            raise RuntimeError("recording session has already finished")
+        scope = self._scope.get()
+        if event.parent_id is None and scope:
+            event = event.model_copy(update={"parent_id": scope[-1]})
         return self.trace.add(event)
 
     def _finalize(self, exc: BaseException | None) -> None:

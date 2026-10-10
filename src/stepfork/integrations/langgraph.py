@@ -17,18 +17,17 @@ Both wrappers are explicit and instance-scoped. Neither installs global
 monkeypatches; normal LangGraph behavior is unchanged outside a ``record(...)``
 or ``ReplaySession`` context.
 
-Synchronous invocation is supported. Asynchronous model invocation
-(``ainvoke``) is intentionally not recorded or replayed yet and raises a clear
-error when attempted inside a Stepfork context.
+Synchronous and asynchronous invocation are supported for non-streaming calls.
 """
 
 from __future__ import annotations
 
+import asyncio
 import inspect
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable, Iterator
 from typing import TYPE_CHECKING, Any, TypeAlias, TypeVar, overload
 
-from stepfork.recorder import llm_request, trace_tool
+from stepfork.recorder import allm_request, llm_request, trace_tool
 from stepfork.recorder.session import active_recorder
 from stepfork.replay.session import active_replay
 from stepfork.trace import JsonValue, ReplayPolicy
@@ -96,6 +95,11 @@ def traced_chat_model(
         return model
 
     original_generate = model._generate
+    original_agenerate = model._agenerate
+    original_stream = model._stream
+    original_astream = model._astream
+    original_public_stream = model.stream
+    original_public_astream = model.astream
     model_id = _model_identifier(model)
     provider_name = provider if provider is not None else _model_provider(model)
 
@@ -124,7 +128,77 @@ def traced_chat_model(
 
     _generate.__stepfork_langgraph__ = True  # type: ignore[attr-defined]
     object.__setattr__(model, "_generate", _generate)
-    _guard_async(model)
+
+    async def _agenerate(
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: Any = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        async def call_original() -> JsonObject:
+            if type(model)._agenerate is BaseChatModel._agenerate:
+                result = await asyncio.to_thread(
+                    original_generate,
+                    messages,
+                    stop=stop,
+                    run_manager=run_manager,
+                    **kwargs,
+                )
+            else:
+                result = await original_agenerate(
+                    messages,
+                    stop=stop,
+                    run_manager=run_manager,
+                    **kwargs,
+                )
+            return _chat_result_to_json(result)
+
+        payload = await allm_request(
+            provider=provider_name,
+            model=model_id,
+            input=_model_input(messages, stop, kwargs),
+            call=call_original,
+            replay_policy=replay_policy,
+        )
+        return _chat_result_from_json(payload)
+
+    object.__setattr__(model, "_agenerate", _agenerate)
+
+    def _stream(*args: Any, **kwargs: Any) -> Iterator[Any]:
+        if active_recorder() is not None or active_replay() is not None:
+            raise LangGraphIntegrationError(
+                "streaming chat model calls are not supported by Stepfork"
+            )
+        yield from original_stream(*args, **kwargs)
+
+    async def _astream(*args: Any, **kwargs: Any) -> AsyncIterator[Any]:
+        if active_recorder() is not None or active_replay() is not None:
+            raise LangGraphIntegrationError(
+                "streaming chat model calls are not supported by Stepfork"
+            )
+        async for item in original_astream(*args, **kwargs):
+            yield item
+
+    object.__setattr__(model, "_stream", _stream)
+    object.__setattr__(model, "_astream", _astream)
+
+    def stream(*args: Any, **kwargs: Any) -> Iterator[Any]:
+        if active_recorder() is not None or active_replay() is not None:
+            raise LangGraphIntegrationError(
+                "streaming chat model calls are not supported by Stepfork"
+            )
+        yield from original_public_stream(*args, **kwargs)
+
+    async def astream(*args: Any, **kwargs: Any) -> AsyncIterator[Any]:
+        if active_recorder() is not None or active_replay() is not None:
+            raise LangGraphIntegrationError(
+                "streaming chat model calls are not supported by Stepfork"
+            )
+        async for item in original_public_astream(*args, **kwargs):
+            yield item
+
+    object.__setattr__(model, "stream", stream)
+    object.__setattr__(model, "astream", astream)
     return model
 
 
@@ -186,7 +260,8 @@ def traced_tool(
             serializer=serializer,
         )(func)
         return StructuredTool.from_function(
-            func=traced,
+            func=None if inspect.iscoroutinefunction(traced) else traced,
+            coroutine=traced if inspect.iscoroutinefunction(traced) else None,
             name=tool_name,
             description=tool_description,
             args_schema=args_schema,
@@ -205,7 +280,7 @@ def traced_tool(
         return decorator
 
     if isinstance(target, BaseTool):
-        inner = getattr(target, "func", None)
+        inner = getattr(target, "coroutine", None) or getattr(target, "func", None)
         if not callable(inner):
             raise LangGraphIntegrationError(
                 f"cannot trace tool {target.name!r}: it does not expose a Python "
@@ -231,34 +306,6 @@ def traced_tool(
         tool_name=tool_name,
         tool_description=description or _callable_description(target, tool_name),
     )
-
-
-def _guard_async(model: BaseChatModel) -> None:
-    """Stop async model calls from silently bypassing recording/replay."""
-    original_agenerate = getattr(model, "_agenerate", None)
-    if original_agenerate is None:
-        return
-
-    async def _agenerate(
-        messages: list[BaseMessage],
-        stop: list[str] | None = None,
-        run_manager: Any = None,
-        **kwargs: Any,
-    ) -> ChatResult:
-        if active_recorder() is not None or active_replay() is not None:
-            raise LangGraphIntegrationError(
-                "Stepfork's LangGraph model tracing supports synchronous "
-                "invocation only; 'ainvoke' is not recorded or replayed yet"
-            )
-        result: ChatResult = await original_agenerate(
-            messages,
-            stop=stop,
-            run_manager=run_manager,
-            **kwargs,
-        )
-        return result
-
-    object.__setattr__(model, "_agenerate", _agenerate)
 
 
 def _model_identifier(model: BaseChatModel) -> str:

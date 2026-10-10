@@ -52,6 +52,31 @@ def test_replay_cli_frozen_success(tmp_path: Path) -> None:
     assert "COMPLETED" in result.stdout
 
 
+def test_replay_cli_live_tools_are_denied_without_authorization(tmp_path: Path) -> None:
+    trace = tmp_path / "booking.sftrace"
+    _record_booking(trace)
+
+    denied = runner.invoke(
+        app, ["replay", str(trace), "--entrypoint", ENTRYPOINT, "--mode", "live"]
+    )
+    assert denied.exit_code == 1
+    assert "requires explicit authorization" in denied.stdout
+
+    invalid = runner.invoke(
+        app,
+        [
+            "replay",
+            str(trace),
+            "--entrypoint",
+            ENTRYPOINT,
+            "--allow-live-tool",
+            "search_flights",
+        ],
+    )
+    assert invalid.exit_code == 2
+    assert "requires --mode live" in invalid.stdout
+
+
 def test_replay_cli_rejects_invalid_mode(tmp_path: Path) -> None:
     trace = tmp_path / "run.sftrace"
     _record_step(trace)
