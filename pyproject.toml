@@ -145,6 +145,12 @@ exclude_lines = [
 target-version = "py311"
 line-length = 88
 src = ["src", "tests"]
+# `examples/real-llm-case-study` is a self-contained, independently
+# reproducible example with its own pyproject/lockfile and pinned PyPI
+# dependency. Its generated regression test, snapshots, evidence, and captured
+# outputs must stay byte-for-byte as produced, so it is not linted or
+# reformatted by the repository's tooling.
+extend-exclude = ["examples/real-llm-case-study"]
 
 
 [tool.ruff.lint]

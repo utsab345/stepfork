@@ -1,0 +1,16 @@
+{
+  "runbooks": {
+    "api_5xx_checkout": {
+      "runbook_id": "api_5xx_checkout",
+      "title": "Checkout 5xx surge",
+      "steps": [
+        "Confirm the blast radius of the failure before assigning severity.",
+        "If most customers cannot complete checkout, declare P0 and page the payments on-call.",
+        "Check for a deployment within the last 60 minutes. A recent deployment is rollback context, not a reason to lower severity.",
+        "Open an incident channel and notify customer support.",
+        "Roll back or disable the suspect deploy only after incident-commander approval."
+      ],
+      "severity_guidance": "Widespread production checkout failure is P0 and requires escalation."
+    }
+  }
+}

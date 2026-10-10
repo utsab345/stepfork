@@ -1,0 +1,9 @@
+{
+  "schema_version": "0.1",
+  "algorithm": "sha256",
+  "files": {
+    "manifest.json": "87c0526b7d84df8385a51110adb4636fadacac05a686f8f10b0d5656684bab2b",
+    "events.jsonl": "f5cd0d6cf6db05fba0e77e826bcf00120350436fbb1bac35d03d7e375b0c9965",
+    "redactions.json": "73ef2fd7072a70b1baa3b0230d94f0b87d9e9e9680275eaeda0eb66ff612293f"
+  }
+}

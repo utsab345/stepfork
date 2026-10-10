@@ -1,0 +1,54 @@
+[
+  {
+    "actions": [
+      "tool:lookup_service_health:substituted",
+      "tool:lookup_service_health:substituted",
+      "tool:get_recent_deployments:substituted",
+      "tool:get_recent_deployments:substituted",
+      "tool:fetch_incident_runbook:substituted",
+      "llm:openai/gemini-2.5-flash:executed"
+    ],
+    "final_after_policy": {
+      "escalation_required": true,
+      "severity": "P0"
+    },
+    "live_llm_attempts": 0,
+    "raw_model_escalation_signal": "Declare P0, page the payments on-call team, and open an incident channel. Invest",
+    "raw_model_severity": "P0",
+    "tool_bodies_executed": 0,
+    "usage": {
+      "completion_tokens": 196,
+      "completion_tokens_details": null,
+      "prompt_tokens": 854,
+      "prompt_tokens_details": null,
+      "total_tokens": 2093
+    },
+    "variant": "baseline"
+  },
+  {
+    "actions": [
+      "tool:lookup_service_health:substituted",
+      "tool:lookup_service_health:substituted",
+      "tool:get_recent_deployments:substituted",
+      "tool:get_recent_deployments:substituted",
+      "tool:fetch_incident_runbook:substituted",
+      "llm:openai/gemini-2.5-flash:executed"
+    ],
+    "final_after_policy": {
+      "escalation_required": true,
+      "severity": "P0"
+    },
+    "live_llm_attempts": 0,
+    "raw_model_escalation_signal": "Declare P0, page the payments on-call team immediately, and investigate a rollba",
+    "raw_model_severity": "P0",
+    "tool_bodies_executed": 0,
+    "usage": {
+      "completion_tokens": 248,
+      "completion_tokens_details": null,
+      "prompt_tokens": 884,
+      "prompt_tokens_details": null,
+      "total_tokens": 2018
+    },
+    "variant": "revised"
+  }
+]

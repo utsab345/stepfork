@@ -1,0 +1,44 @@
+{
+  "services": {
+    "checkout-api": {
+      "service": "checkout-api",
+      "status": "down",
+      "tier": "tier-0",
+      "customer_facing": true,
+      "availability": 0.61,
+      "error_rate": 0.72,
+      "latency_p95_ms": 5240,
+      "notes": "POST /checkout returns HTTP 500 for most customers"
+    },
+    "payments-api": {
+      "service": "payments-api",
+      "status": "degraded",
+      "tier": "tier-0",
+      "customer_facing": true,
+      "availability": 0.88,
+      "error_rate": 0.41,
+      "latency_p95_ms": 3110,
+      "notes": "downstream of checkout-api; elevated timeouts on capture"
+    },
+    "search-api": {
+      "service": "search-api",
+      "status": "healthy",
+      "tier": "tier-1",
+      "customer_facing": true,
+      "availability": 0.999,
+      "error_rate": 0.002,
+      "latency_p95_ms": 180,
+      "notes": "nominal"
+    },
+    "user-profile-api": {
+      "service": "user-profile-api",
+      "status": "healthy",
+      "tier": "tier-1",
+      "customer_facing": true,
+      "availability": 0.998,
+      "error_rate": 0.004,
+      "latency_p95_ms": 210,
+      "notes": "nominal"
+    }
+  }
+}

@@ -1,0 +1,152 @@
+== 0. Environment snapshot ==
+  (only the line above, if any; provider keys must not appear)
+
+== 1. uv sync (fresh venv, pinned lockfile) ==
+Using CPython 3.13.15
+Creating virtual environment at: .venv
+Resolved 39 packages in 0.84ms
+warning: Failed to hardlink files; falling back to full copy. This may lead to degraded performance.
+         If the cache and target directories are on different filesystems, hardlinking may not be supported.
+         If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+Installed 26 packages in 109ms
+ + annotated-doc==0.0.5
+ + annotated-types==0.8.0
+ + anyio==4.15.1
+ + h11==0.16.0
+ + httpcore2==2.13.1
+ + httpx2==2.13.1
+ + idna==3.20
+ + iniconfig==2.3.1
+ + jiter==0.17.0
+ + markdown-it-py==4.2.0
+ + mdurl==0.1.2
+ + openai==3.28.0
+ + packaging==26.3
+ + pluggy==1.6.0
+ + pydantic==2.14.0
+ + pydantic-core==2.50.0
+ + pygments==2.21.0
+ + pytest==9.1.1
+ + rich==15.0.0
+ + shellingham==1.5.4
+ + sniffio==1.3.1
+ + stepfork==0.1.0a6
+ + truststore==0.10.4
+ + typer==0.27.3
+ + typing-extensions==4.16.0
+ + typing-inspection==0.4.4
+  install OK
+
+== 2. stepfork resolves to PyPI site-packages, not local source ==
+  stepfork module: /tmp/opencode/case-clone/.venv/lib/python3.13/site-packages/stepfork/__init__.py
+  version: 0.1.0a6
+  OK: published PyPI wheel
+  python: 3.13.15
+
+== 3. Full offline pytest suite ==
+.......                                                                  [100%]
+7 passed in 0.14s
+rc=0
+
+== 4. Frozen replay verification (counters) ==
+tool_body_executions : 0
+live_llm_attempts    : 0
+executed_calls       :
+  - tool lookup_service_health    substituted
+  - tool lookup_service_health    substituted
+  - tool get_recent_deployments   substituted
+  - tool get_recent_deployments   substituted
+  - tool fetch_incident_runbook   substituted
+  - llm openai/gemini-2.5-flash  substituted
+matched              : 6
+max_steps            : 6
+--- replay output ---
+{
+  "affected_services": [
+    "checkout-api",
+    "payments-api"
+  ],
+  "escalation_required": true,
+  "incident_id": "INC-2026-1010-001",
+  "recommended_next_action": "Declare P0, page the payments on-call team, open an incident channel, and notify customer support. Investigate the recent deployment to checkout-api (version checkout-2026.10.10-3) as a potential cause and prepare for a rollback after incident commander approval.",
+  "severity": "P0",
+  "summary": "The production checkout-api is experiencing widespread HTTP 500 errors, with a 72% error rate, making it unavailable for most customers. This issue started shortly after a recent deployment to the checkout-api. The payments-api, a downstream service, is also degraded with elevated error rates.",
+  "supporting_evidence": [
+    "checkout-api status is 'down' with 0.61 availability and 0.72 error_rate.",
+    "checkout-api is customer_facing and tier-0.",
+    "POST /checkout returns HTTP 500 for most customers.",
+    "A deployment to checkout-api occurred 42 minutes ago.",
+    "payments-api status is 'degraded' with 0.88 availability and 0.41 error_rate.",
+    "payments-api is customer_facing and tier-0, with elevated timeouts on capture.",
+    "Runbook states 'Widespread production checkout failure is P0' and 'If most customers cannot complete checkout, declare P0 and page the payments on-call.'"
+  ]
+}
+  OK tool bodies = 0
+  OK live llm = 0
+  OK reproduce P0
+
+== 5. Trace integrity validation ==
+Stepfork Trace Validation
+
+Trace    traces/incident-triage.sftrace
+
+Schema    0.1   
+Events    14    
+Mode      strict
+
+Structure: PASS
+Integrity: VERIFIED
+
+manifest.json      verified
+events.jsonl       verified
+redactions.json    verified
+
+✓ Manifest valid
+✓ Event structure valid
+✓ Event IDs unique
+✓ Parent references valid
+✓ Run IDs consistent
+✓ Event count matches
+
+Validation passed.
+rc=0
+
+== 6. CLI frozen replay ==
+rc=1
+Status: DIVERGED
+final result differs from recorded output at 'escalation_required': recorded 
+false, actual true. Possible causes include untraced nondeterminism or changed 
+local logic.
+
+  note: rc=1 DIVERGED is EXPECTED. The CLI replays and diffs against the
+  recorded (buggy) outcome; the fixed agent intentionally corrects behavior.
+  The generated pytest test instead asserts the corrected expected.json.
+
+== 7. Regression test (green, fixed agent) ==
+.                                                                        [100%]
+1 passed in 0.11s
+rc=0
+
+== 8. Regression test (red, buggy snapshot) ==
+rc=1
+E               AssertionError: behavior mismatch at 'escalation_required': expected true, got false
+1 failed in 0.12s
+  restored fixed agent.py; diff check:
+  OK agent.py restored to fixed
+
+== 9. Scenario A + B (divergence) tests ==
+...                                                                      [100%]
+3 passed in 0.11s
+rc=0
+
+== 10. No credential-shaped strings in the clone ==
+  WARNING: possible secret-like strings found:
+./provider.py:147:    return OpenAI(api_key=credentials.token, base_url=base_url)
+
+== CLI schema sanity (documented commands) ==
+  OK export --help
+  OK replay --help
+  OK inspect --help
+  OK validate --help
+
+== done ==

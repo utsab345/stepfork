@@ -1,0 +1,29 @@
+{
+  "deployments": {
+    "checkout-api": [
+      {
+        "version": "checkout-2026.10.10-3",
+        "sha": "a1b2c3d4",
+        "minutes_ago": 42,
+        "author_team": "checkout",
+        "summary": "refactor: consolidate payment retry and error handling"
+      },
+      {
+        "version": "checkout-2026.10.09-2",
+        "sha": "9f8e7d6c",
+        "minutes_ago": 1510,
+        "author_team": "checkout",
+        "summary": "chore: bump logging library"
+      }
+    ],
+    "payments-api": [
+      {
+        "version": "payments-2026.10.09-7",
+        "sha": "d4e5f6a7",
+        "minutes_ago": 1340,
+        "author_team": "payments",
+        "summary": "feature: idempotency keys for capture"
+      }
+    ]
+  }
+}

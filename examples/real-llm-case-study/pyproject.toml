@@ -1,0 +1,22 @@
+[project]
+name = "stepfork-incident-triage-case-study"
+version = "0.1.0"
+description = "Real-LLM Stepfork case study: catching an IT incident-triage regression"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    # Pinned to the public pre-release used for this case study.
+    "stepfork[openai]==0.1.0a6",
+]
+
+[project.optional-dependencies]
+# Needed only to re-record a live trace against Google Vertex AI via ADC.
+vertex = ["google-auth>=2.30", "requests>=2.31"]
+# Needed to run the exported pytest regression test.
+test = ["pytest==9.1.1"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

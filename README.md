@@ -272,6 +272,38 @@ shows the limit of frozen replay and a selected live LLM in hybrid replay.
 The demos print real results from real subprocesses; they never fabricate
 output.
 
+## Real-LLM Case Study: The Model Was Right, the Agent Was Wrong
+
+A complete, offline-reproducible example of Stepfork in practice. A real Google
+Gemini 2.5 Flash request (`gemini-2.5-flash` through the OpenAI SDK adapter)
+correctly classified a synthetic production checkout incident as **P0**. A
+deliberately introduced three-line Python postprocessing bug then downgraded
+that to **P1** and disabled escalation. Stepfork recorded the LLM interaction
+and the instrumented tool calls, and a generated pytest regression test failed
+against the buggy logic and passed after the fix - using the same recorded
+trace.
+
+Frozen replay made **zero** additional model requests and executed **zero**
+instrumented tool bodies.
+
+```text
+Real Gemini response: P0
+Buggy application:    P1, escalation=false
+Regression test:      FAILED
+
+Fixed application:    P0, escalation=true
+Same regression test: PASSED
+
+Additional LLM calls during frozen replay: 0
+```
+
+Start with the example
+[README](examples/real-llm-case-study/README.md) or read the full
+[CASE_STUDY.md](examples/real-llm-case-study/CASE_STUDY.md). The incident and
+operational data are synthetic and the application bug was introduced on
+purpose; only the model request was real. Stepfork does not know the correct
+business outcome - it lives in `expected.json`, defined by a human.
+
 ## CLI Reference
 
 | Command | Purpose |

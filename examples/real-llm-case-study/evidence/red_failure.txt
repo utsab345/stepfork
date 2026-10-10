@@ -1,0 +1,110 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+___________________ test_stepfork_regression_incident_triage ___________________
+
+    def test_stepfork_regression_incident_triage() -> None:
+        """Fail when the agent diverges from the expected outcome."""
+>       run_regression_case(
+            trace_path=TRACE_PATH,
+            import_root=IMPORT_ROOT,
+            entrypoint=ENTRYPOINT,
+            expectation=EXPECTATION,
+            has_expectation=HAS_EXPECTATION,
+            trajectory_expectation=TRAJECTORY_EXPECTATION,
+            mode=MODE,
+            live_llms=LIVE_LLMS,
+            allow_live_tools=ALLOW_LIVE_TOOLS,
+        )
+
+tests/test_incident_regression.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+trace_path = PosixPath('<repo>/tests/../traces/incident-triage.sftrace')
+import_root = PosixPath('<repo>/tests/..')
+entrypoint = 'agent:run_incident_agent'
+expectation = {'affected_services': ['checkout-api', 'payments-api'], 'escalation_required': True, 'incident_id': 'INC-2026-1010-001...ersion checkout-2026.10.10-3) as a potential cause and prepare for a rollback after incident commander approval.', ...}
+has_expectation = True, trajectory_expectation = None, mode = 'frozen'
+live_llms = None, allow_live_tools = None
+
+    def run_regression_case(
+        *,
+        trace_path: Path,
+        import_root: Path | None,
+        entrypoint: str,
+        expectation: JsonValue | None = None,
+        has_expectation: bool = True,
+        trajectory_expectation: JsonValue | None = None,
+        mode: str = "frozen",
+        live_llms: set[str] | frozenset[str] | None = None,
+        allow_live_tools: set[str] | frozenset[str] | None = None,
+    ) -> JsonValue:
+        """Replay a trusted entrypoint and assert the expected behavior.
+    
+        Fails with an actionable ``AssertionError`` when the trace is missing, the
+        entrypoint cannot load, replay diverges from the recorded dependency
+        sequence, or the returned value differs from ``expectation``.
+        """
+        bundle = Path(trace_path)
+        if not bundle.exists():
+            raise AssertionError(f"stepfork: trace bundle not found: {bundle}")
+        try:
+            recorded = Trace.load(bundle)
+        except TraceStorageError as exc:
+            raise AssertionError(f"stepfork: trace bundle unreadable: {exc}") from exc
+    
+        try:
+            entry = resolve_entrypoint(entrypoint, import_root=import_root)
+        except EntrypointError as exc:
+            raise AssertionError(f"stepfork: entrypoint failed: {exc}") from exc
+    
+        with ReplaySession.from_trace(
+            recorded,
+            mode=mode,
+            live_llms=live_llms,
+            allow_live_tools=allow_live_tools,
+        ) as replay:
+            try:
+                if inspect.iscoroutinefunction(entry):
+                    actual = asyncio.run(entry())
+                else:
+                    actual = entry()
+                    if inspect.isawaitable(actual):
+                        raise AssertionError(
+                            "stepfork: entrypoint returned an awaitable from a "
+                            "synchronous function; use an async entrypoint"
+                        )
+            except ReplayMismatchError as exc:
+                raise AssertionError(f"stepfork replay divergence: {exc}") from exc
+            except ReplayPolicyError as exc:
+                raise AssertionError(f"stepfork replay policy violation: {exc}") from exc
+            try:
+                replay.verify_complete()
+            except ReplayError as exc:
+                raise AssertionError(f"stepfork replay divergence: {exc}") from exc
+            if replay.divergence is not None:
+                raise AssertionError(f"stepfork replay divergence: {replay.divergence}")
+            if trajectory_expectation is not None:
+                assert_trajectory(replay, trajectory_expectation)
+    
+        try:
+            actual_json = to_json_value(actual)
+        except TraceSerializationError as exc:
+            raise AssertionError(
+                f"stepfork: entrypoint returned a non-serializable value: {exc}"
+            ) from exc
+    
+        if has_expectation:
+            difference = first_difference(expectation, actual_json)
+            if difference is not None:
+                path, expected_value, actual_value = difference
+>               raise AssertionError(
+                    f"behavior mismatch at '{path}': "
+                    f"expected {_preview(expected_value)}, "
+                    f"got {_preview(actual_value)}"
+                )
+E               AssertionError: behavior mismatch at 'escalation_required': expected true, got false
+
+.venv/lib/python3.13/site-packages/stepfork/export/runtime.py:106: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_incident_regression.py::test_stepfork_regression_incident_triage
+1 failed in 0.17s

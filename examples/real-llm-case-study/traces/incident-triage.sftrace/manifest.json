@@ -1,0 +1,21 @@
+{
+  "format": "stepfork",
+  "schema_version": "0.1",
+  "run_id": "run_6eedaa0703494b56b8c0fc3286a2657e",
+  "agent_name": "incident-triage-agent",
+  "created_at": "2026-10-10T05:01:08.964510Z",
+  "status": "completed",
+  "failure": null,
+  "environment": {
+    "python": "3.13",
+    "os": "linux",
+    "stepfork_version": "0.1.0a6"
+  },
+  "totals": {
+    "events": 14,
+    "llm_calls": 1,
+    "tool_calls": 5,
+    "cost_usd": null,
+    "duration_ms": 10845
+  }
+}

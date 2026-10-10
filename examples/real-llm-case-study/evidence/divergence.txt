@@ -1,0 +1,6 @@
+--- reordered: ReplayMismatchError ---
+call #1: expected tool 'lookup_service_health' but the agent called 'get_recent_deployments'
+tool_bodies_executed: 0
+--- changed_argument: ReplayMismatchError ---
+call #3: tool 'get_recent_deployments' input diverged from the recording
+tool_bodies_executed: 0

@@ -1,0 +1,20 @@
+{
+  "affected_services": [
+    "checkout-api",
+    "payments-api"
+  ],
+  "escalation_required": true,
+  "incident_id": "INC-2026-1010-001",
+  "recommended_next_action": "Declare P0, page the payments on-call team, open an incident channel, and notify customer support. Investigate the recent deployment to checkout-api (version checkout-2026.10.10-3) as a potential cause and prepare for a rollback after incident commander approval.",
+  "severity": "P0",
+  "summary": "The production checkout-api is experiencing widespread HTTP 500 errors, with a 72% error rate, making it unavailable for most customers. This issue started shortly after a recent deployment to the checkout-api. The payments-api, a downstream service, is also degraded with elevated error rates.",
+  "supporting_evidence": [
+    "checkout-api status is 'down' with 0.61 availability and 0.72 error_rate.",
+    "checkout-api is customer_facing and tier-0.",
+    "POST /checkout returns HTTP 500 for most customers.",
+    "A deployment to checkout-api occurred 42 minutes ago.",
+    "payments-api status is 'degraded' with 0.88 availability and 0.41 error_rate.",
+    "payments-api is customer_facing and tier-0, with elevated timeouts on capture.",
+    "Runbook states 'Widespread production checkout failure is P0' and 'If most customers cannot complete checkout, declare P0 and page the payments on-call.'"
+  ]
+}
