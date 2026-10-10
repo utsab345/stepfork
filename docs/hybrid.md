@@ -17,9 +17,7 @@ with ReplaySession.from_trace(
 
 assert result == {"approved": True}  # reviewed expectation
 assert_tool_not_called(replay, "charge_card")
-assert [call.action for call in replay.executed_calls] == [
-    "executed", "substituted"
-]
+assert [call.action for call in replay.executed_calls] == ["executed", "substituted"]
 ```
 
 The example labels and expected output are illustrative. The live LLM label

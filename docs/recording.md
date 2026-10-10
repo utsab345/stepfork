@@ -86,7 +86,9 @@ from stepfork import allm_request, record
 
 async with record("agent", output="run.sftrace") as session:
     response = await allm_request(
-        provider="fake", model="demo", input={"messages": messages},
+        provider="fake",
+        model="demo",
+        input={"messages": messages},
         call=lambda: async_client.create(messages),
     )
     session.set_output(response)

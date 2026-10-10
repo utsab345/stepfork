@@ -4,6 +4,42 @@ All notable changes to Stepfork are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.0a6] - 2026-10-10
+
+Behavioral assertions and selective live-model evaluation, with no trace
+format change.
+
+### Added
+
+- Public assertions over the actual replay trajectory: tool presence, absence,
+  count, arguments, ordering, exact or subsequence matching, and maximum steps.
+  Exported pytest tests accept reviewed JSON trajectory expectations.
+- Async recording and frozen replay for instrumented tools, LLM requests,
+  agent entrypoints, and supported OpenAI and LangGraph adapter paths.
+- Opt-in hybrid replay that re-executes explicitly selected LLMs while keeping
+  recorded tool responses frozen. The offline LangGraph fake-provider example
+  demonstrates a model-driven failure and a reviewed regression expectation.
+- Explicit `allow_live_tools` authorization for tool execution in legacy
+  `mode="live"`, with matching CLI and pytest-export options.
+
+### Changed
+
+- Live replay now denies instrumented tool bodies by default. Existing callers
+  that intentionally execute them must name each tool through
+  `allow_live_tools={...}` or `--allow-live-tool NAME`. This is an API behavior
+  change for live mode; frozen replay remains the default.
+
+### Limitations
+
+- Hybrid replay is not deterministic; selected live models may incur network
+  calls, token costs, and latency. Changed model output can diverge from the
+  recorded tool path rather than finding a different recorded response.
+- A live-tool allowlist does not sandbox arbitrary code or intercept
+  uninstrumented side effects. Async concurrent calls retain strict invocation
+  order matching, but task scheduling itself is not frozen.
+
+[0.1.0a6]: https://github.com/utsab345/stepfork/releases/tag/v0.1.0a6
+
 ## [0.1.0a5] - 2026-10-09
 
 Replay correctness and developer trust fixes. No new integrations or trace

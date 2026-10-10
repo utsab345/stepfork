@@ -73,4 +73,4 @@ in this repository.
 
 Stepfork is experimental. See the
 [changelog](https://github.com/utsab345/stepfork/blob/main/CHANGELOG.md) and
-the [v0.1.0a5 release notes](releases/v0.1.0a5.md) for what shipped.
+the [v0.1.0a6 release notes](releases/v0.1.0a6.md) for what shipped.

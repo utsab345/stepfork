@@ -25,6 +25,7 @@ hatchling via `[tool.hatch.version]`.
       python examples/refund_agent/demo.py
       python examples/openai_chat/demo.py
       python examples/langgraph_agent/demo.py
+      python examples/model_decision/demo.py
       stepfork --version
       ```
 - [ ] `CHANGELOG.md` has an entry for the new version.

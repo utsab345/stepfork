@@ -40,6 +40,7 @@ nav:
       - development.md
       - release-checklist.md
       - pypi-publishing.md
+      - releases/v0.1.0a6.md
       - releases/v0.1.0a5.md
       - releases/v0.1.0a4.md
       - releases/v0.1.0a3.md

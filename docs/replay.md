@@ -30,8 +30,12 @@ body is not executed during replay.
 
 ```python
 from stepfork.assertions import (
-    assert_max_steps, assert_tool_arguments, assert_tool_call_count,
-    assert_tool_called, assert_tool_not_called, assert_tool_order,
+    assert_max_steps,
+    assert_tool_arguments,
+    assert_tool_call_count,
+    assert_tool_called,
+    assert_tool_not_called,
+    assert_tool_order,
     assert_tool_sequence,
 )
 
