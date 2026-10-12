@@ -88,7 +88,7 @@ def test_forked_trace_passes_validation(tmp_path: Path) -> None:
 
     # Validate in strict mode
     validation = validate_bundle(forked_path, strict=True)
-    assert validation.valid, f"Validation failed: {validation.errors}"
+    assert validation.valid, f"Validation failed: {validation.issues}"
 
 
 def test_override_priority_event_id_over_step() -> None:
