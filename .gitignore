@@ -60,3 +60,4 @@ examples/model_decision/.artifacts/
 
 # Quickstart demo artifacts
 examples/quickstart/.artifacts/
+research_langgraph.py
