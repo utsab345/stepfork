@@ -100,7 +100,9 @@ def minimize_command(
     try:
         trace = Trace.load(path)
     except Exception as exc:
-        console.print(f"[red]Error loading trace:[/red] {exc}", )
+        console.print(
+            f"[red]Error loading trace:[/red] {exc}",
+        )
         raise typer.Exit(2) from exc
 
     # Display trace info
@@ -141,7 +143,9 @@ def minimize_command(
         console.print("\n[yellow]Minimization interrupted by user[/yellow]")
         raise typer.Exit(1) from None
     except Exception as exc:
-        console.print(f"\n[red]Minimization failed:[/red] {exc}", )
+        console.print(
+            f"\n[red]Minimization failed:[/red] {exc}",
+        )
         raise typer.Exit(1) from exc
 
     # Check if minimization succeeded

@@ -99,6 +99,7 @@ Let's minimize a failing agent that books the wrong flight:
 # agent.py
 from stepfork import record, trace_tool
 
+
 @trace_tool(name="search_flights")
 def search_flights(destination: str) -> list[dict]:
     return [
@@ -106,15 +107,18 @@ def search_flights(destination: str) -> list[dict]:
         {"id": "FL456", "dest": "NYC", "price": 600},
     ]
 
+
 @trace_tool(name="book_flight")
 def book_flight(flight_id: str) -> dict:
     return {"id": flight_id, "status": "confirmed"}
+
 
 def run_agent(destination: str = "KTM") -> dict:
     flights = search_flights(destination)
     # BUG: books the second flight instead of checking destination
     booked = book_flight(flights[1]["id"])
     return {"booking": booked, "destination": destination}
+
 
 if __name__ == "__main__":
     with record("booking-agent", output="failure.sftrace") as session:

@@ -163,9 +163,9 @@ def test_minimization_preserves_dependencies(tmp_path: Path) -> None:
         event_ids = {event.id for event in minimized_trace.events}
         for event in minimized_trace.events:
             if event.parent_id is not None:
-                assert (
-                    event.parent_id in event_ids
-                ), f"Event {event.id} has invalid parent {event.parent_id}"
+                assert event.parent_id in event_ids, (
+                    f"Event {event.id} has invalid parent {event.parent_id}"
+                )
 
 
 @pytest.mark.integration
