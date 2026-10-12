@@ -47,7 +47,7 @@ def test_fork_at_step_zero(tmp_path: Path) -> None:
     trace = Trace(agent_name="test", status=RunStatus.COMPLETED)
     start = trace.add(RunStart())
     call = trace.add(ToolCall(name="test", input={}, parent_id=start.id))
-    result = trace.add(ToolResult(name="test", output={}, parent_id=call.id))
+    trace.add(ToolResult(name="test", output={}, parent_id=call.id))
 
     trace_path = tmp_path / "test.sftrace"
     trace.save(trace_path)
@@ -72,7 +72,7 @@ def test_forked_trace_passes_validation(tmp_path: Path) -> None:
     trace = Trace(agent_name="test", status=RunStatus.COMPLETED)
     start = trace.add(RunStart())
     call = trace.add(ToolCall(name="test", input={}, parent_id=start.id))
-    result = trace.add(ToolResult(name="test", output={"x": 1}, parent_id=call.id))
+    trace.add(ToolResult(name="test", output={"x": 1}, parent_id=call.id))
 
     trace_path = tmp_path / "test.sftrace"
     trace.save(trace_path)
@@ -106,7 +106,7 @@ def test_override_priority_event_id_over_step() -> None:
     ]
 
     engine = ForkEngine(trace, ForkPoint(event_id=None, step=2), overrides=overrides)
-    forked, info = engine.fork()
+    forked, _ = engine.fork()
 
     # Event ID should take priority
     forked_result = forked.events[2]
@@ -117,7 +117,7 @@ def test_override_priority_event_id_over_step() -> None:
 def test_fork_preserves_created_at_timestamp() -> None:
     """Forked trace preserves original created_at timestamp."""
     trace = Trace(agent_name="test", status=RunStatus.COMPLETED)
-    start = trace.add(RunStart())
+    trace.add(RunStart())
     original_created_at = trace.created_at
 
     engine = ForkEngine(trace, ForkPoint(event_id=None, step=0))
@@ -130,7 +130,7 @@ def test_fork_with_no_events_excluded() -> None:
     """Can fork at the last event (includes all events)."""
     trace = Trace(agent_name="test", status=RunStatus.COMPLETED)
     start = trace.add(RunStart())
-    call = trace.add(ToolCall(name="test", input={}, parent_id=start.id))
+    trace.add(ToolCall(name="test", input={}, parent_id=start.id))
 
     engine = ForkEngine(trace, ForkPoint(event_id=None, step=1))
     forked, info = engine.fork()
@@ -175,7 +175,7 @@ def test_fork_result_counts_are_accurate(tmp_path: Path) -> None:
     trace = Trace(agent_name="test", status=RunStatus.COMPLETED)
     start = trace.add(RunStart())
     call = trace.add(ToolCall(name="test", input={}, parent_id=start.id))
-    result = trace.add(ToolResult(name="test", output={}, parent_id=call.id))
+    trace.add(ToolResult(name="test", output={}, parent_id=call.id))
 
     trace_path = tmp_path / "test.sftrace"
     trace.save(trace_path)
@@ -196,7 +196,7 @@ def test_fork_with_empty_overrides_list() -> None:
     trace = Trace(agent_name="test", status=RunStatus.COMPLETED)
     start = trace.add(RunStart())
     call = trace.add(ToolCall(name="test", input={}, parent_id=start.id))
-    result = trace.add(ToolResult(name="test", output={"x": 1}, parent_id=call.id))
+    trace.add(ToolResult(name="test", output={"x": 1}, parent_id=call.id))
 
     engine1 = ForkEngine(trace, ForkPoint(event_id=None, step=2), overrides=[])
     engine2 = ForkEngine(trace, ForkPoint(event_id=None, step=2), overrides=None)
