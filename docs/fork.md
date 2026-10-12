@@ -47,10 +47,8 @@ from stepfork.fork import fork_trace, ForkPoint, OverrideSpec
 result = fork_trace(
     Path("failure.sftrace"),
     ForkPoint(event_id=None, step=5),
-    overrides=[
-        OverrideSpec(step=5, output={"status": "success", "value": 100})
-    ],
-    output_path=Path("forked.sftrace")
+    overrides=[OverrideSpec(step=5, output={"status": "success", "value": 100})],
+    output_path=Path("forked.sftrace"),
 )
 
 print(f"Fork succeeded: {result.success}")
@@ -101,8 +99,7 @@ override1 = OverrideSpec(step=5, output={"new": "value"})
 
 # Override by event ID (more specific)
 override2 = OverrideSpec(
-    event_id="evt_abc123",
-    output={"count": 100, "items": ["a", "b"]}
+    event_id="evt_abc123", output={"count": 100, "items": ["a", "b"]}
 )
 
 # Event ID takes priority if both target the same event
@@ -129,7 +126,7 @@ try:
         fork_point,
         overrides=[
             OverrideSpec(step=999, output={})  # Invalid step
-        ]
+        ],
     )
 except ForkError as e:
     print(f"Override validation failed: {e}")
@@ -148,10 +145,12 @@ from pathlib import Path
 from stepfork import record, trace_tool
 from stepfork.fork import fork_trace, ForkPoint, OverrideSpec
 
+
 # 1. Record original trace
 @trace_tool(name="get_value")
 def get_value(x: int) -> dict[str, int]:
     return {"value": x}
+
 
 with record("test-agent", output="original.sftrace"):
     result = get_value(42)
@@ -161,14 +160,13 @@ with record("test-agent", output="original.sftrace"):
 fork_result = fork_trace(
     Path("original.sftrace"),
     ForkPoint(event_id=None, step=2),  # step 2 is the ToolResult
-    overrides=[
-        OverrideSpec(step=2, output={"value": 999})
-    ],
-    output_path=Path("forked.sftrace")
+    overrides=[OverrideSpec(step=2, output={"value": 999})],
+    output_path=Path("forked.sftrace"),
 )
 
 # 3. Verify the fork
 from stepfork.trace import Trace
+
 forked = Trace.load("forked.sftrace")
 tool_result = forked.events[2]
 print(f"Forked: {tool_result.output}")  # {"value": 999}
@@ -184,7 +182,7 @@ from stepfork.fork import ForkEngine, ForkPoint
 engine = ForkEngine(
     original_trace,
     ForkPoint(event_id=None, step=5),
-    parent_trace_path="original.sftrace"
+    parent_trace_path="original.sftrace",
 )
 
 forked_trace, fork_info = engine.fork()
@@ -473,7 +471,7 @@ fork_result = fork_trace(
     "original.sftrace",
     ForkPoint(step=5),
     overrides=[OverrideSpec(step=5, output={"new": "value"})],
-    output_path="forked.sftrace"
+    output_path="forked.sftrace",
 )
 
 # 2. Replay from the forked trace
