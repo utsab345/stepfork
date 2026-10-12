@@ -106,11 +106,14 @@ def test_get_override_prefers_event_id() -> None:
 
     event = trace.events[2]
     override = registry.get_override(event)
+    assert override is not None
     assert override.output == {"from": "event_id"}
 
 
 def test_apply_override_to_tool_result() -> None:
     """Can apply override to tool result event."""
+    from stepfork.trace import ToolResult
+
     trace = build_test_trace()
     event = trace.events[2]  # ToolResult
     override = OverrideSpec(step=2, output={"new_count": 100})
@@ -118,6 +121,7 @@ def test_apply_override_to_tool_result() -> None:
     registry = OverrideRegistry([override])
     overridden = registry.apply_override(event, override)
 
+    assert isinstance(overridden, ToolResult)
     assert overridden.output == {"new_count": 100}
     assert overridden.id == event.id
     assert overridden.step == event.step

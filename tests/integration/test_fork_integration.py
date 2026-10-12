@@ -22,7 +22,7 @@ def book(item_id: str) -> dict[str, str]:
     return {"status": "booked", "id": item_id}
 
 
-def run_agent() -> dict[str, str]:
+def run_agent() -> dict[str, str | int]:
     """Agent that uses multiple tools."""
     results = search("flights")
     booking = book("FL123")
