@@ -4,6 +4,35 @@ All notable changes to Stepfork are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] - v0.2.0
+
+Automatic failure minimization using dependency-aware delta debugging.
+
+### Added
+
+- **Failure minimization** via `stepfork minimize` command that automatically
+  finds the smallest reproducible trace preserving the original failure.
+- Dependency-aware delta debugging algorithm that respects parent-child event
+  relationships and structural integrity.
+- Failure signature detection supporting exception-based, replay-divergence,
+  and output-mismatch failures.
+- Minimization orchestrator with timeout handling, nondeterminism detection,
+  and iteration limits.
+- Comprehensive unit tests, integration tests, and CLI tests for minimization.
+- Complete documentation in `docs/minimize.md` and updated CLI reference.
+
+### Changed
+
+- README roadmap updated to reflect v0.2 implementation status.
+
+### Limitations
+
+- Minimization requires replay to fail consistently. Highly nondeterministic
+  failures may not minimize reliably.
+- Delta debugging uses binary search with dependency preservation. Very large
+  traces (1000+ events) may require significant replay attempts.
+- Timeout handling uses SIGALRM on Unix systems; Windows support is limited.
+
 ## [0.1.0a6] - 2026-10-10
 
 Behavioral assertions and selective live-model evaluation, with no trace

@@ -21,6 +21,7 @@ Commands:
 - [validate](#validate)
 - [inspect](#inspect)
 - [replay](#replay)
+- [minimize](#minimize)
 - [diff](#diff)
 - [export](#export)
 
@@ -237,6 +238,92 @@ Common errors:
 - Replay divergence messages, for example `call #1: input diverged from the
   recording` or `replay ended before consuming 1 recorded dependency call(s)`.
 - `Invalid replay mode <mode>.`
+
+---
+
+## minimize
+
+Minimize a failing trace to the smallest reproducible subset.
+
+```text
+Usage: stepfork minimize [OPTIONS] PATH --entrypoint MODULE:FUNCTION
+```
+
+Arguments:
+
+| Argument | Description |
+|---|---|
+| `PATH` | Path to the `.sftrace` directory bundle to minimize. Required. |
+| `--entrypoint`, `-e` | Agent entrypoint as `MODULE:FUNCTION`. Required. |
+
+Options:
+
+| Option | Description |
+|---|---|
+| `--expect-output FILE` | JSON file with expected output for comparison. |
+| `--mode`, `-m` | Replay mode: `frozen`, `live`, or `hybrid`. Default: `frozen`. |
+| `--output`, `-o` | Path for the minimized `.sftrace` bundle. Default: `<path>-minimized.sftrace`. |
+| `--overwrite` | Overwrite the output bundle if it exists. Default: `false`. |
+| `--timeout SECONDS` | Timeout in seconds for each replay attempt. Default: `30.0`. |
+| `--attempts N` | Number of attempts per subset test (for nondeterminism). Default: `1`. |
+| `--help` | Show command help and exit. |
+
+Minimization uses dependency-aware delta debugging to find the smallest set of
+events that preserves the original failure. The process:
+
+1. Detects the failure signature by replaying the original trace
+2. Systematically tests smaller event subsets while preserving dependencies
+3. Verifies the minimized trace reproduces the same failure
+4. Saves the minimal trace and reports reduction statistics
+
+Example:
+
+```bash
+echo '{"order_id": "ORD-1001", "should_notify": true}' > expected.json
+
+stepfork minimize failure.sftrace \
+    --entrypoint quickstart:run_agent \
+    --expect-output expected.json \
+    --output minimal.sftrace
+```
+
+```text
+Stepfork Minimize
+
+Original trace:  failure.sftrace
+Agent:           notify-agent
+Events:          8
+Entrypoint:      quickstart:run_agent
+Mode:            frozen
+
+Detecting failure signature...
+Minimizing trace...
+
+╭─ Minimization Report ─────────╮
+│ Original Events     8          │
+│ Minimized Events    5          │
+│ Reduction           37.5%      │
+│ Replay Attempts     15         │
+│ Failure Signature   Output Mismatch │
+│ Minimal             Yes        │
+╰────────────────────────────────╯
+
+✓ Minimized trace saved to: minimal.sftrace
+```
+
+Exit codes:
+
+- `0` minimization succeeded and produced a valid minimal trace.
+- `1` minimization failed (no failure detected, or minimization error).
+- `2` invalid input, unreadable trace, or unresolvable entrypoint.
+
+Common errors:
+
+- `Failed to detect original failure signature: trace replay completed successfully; no failure to minimize` - the trace does not fail when replayed.
+- `cannot resolve entrypoint ...` - the entrypoint specification is invalid or the module cannot be imported.
+- `Minimized trace does not reproduce the original failure` - rare internal error during delta debugging.
+
+See [docs/minimize.md](minimize.md) for detailed documentation and examples.
 
 ---
 

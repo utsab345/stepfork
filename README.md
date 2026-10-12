@@ -374,9 +374,6 @@ before v1.0.
 
 - **Alpha on PyPI.** `pip install --pre stepfork` installs the current
   pre-release; the API and trace format may still change.
-- **No automatic failure minimization.** The exported regression test uses the
-  recorded steps. Reducing it to the smallest failing subset and fork-at-step
-  are planned work, not automatic behavior.
 - **Limited integrations.** Optional adapters cover the OpenAI Python SDK
   (synchronous and asynchronous, non-streaming `chat.completions.create`) and
   LangGraph (synchronous and asynchronous `BaseChatModel` generation and
@@ -422,11 +419,11 @@ bundles, are in [docs/security.md](docs/security.md).
 - Offline examples for both adapters
 - Example GitHub Actions regression workflow
 
-### v0.2
+### v0.2 (Current)
 
-- Failure minimization
-- Fork-at-step
-- Baselines
+- **Failure minimization** - Automatic delta debugging to find minimal traces
+- Fork-at-step (planned)
+- Baselines (planned)
 
 ### v0.3
 

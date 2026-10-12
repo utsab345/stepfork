@@ -45,8 +45,9 @@ def test_new_docs_pages_exist_and_are_navigable() -> None:
         assert page in nav, f"{page} missing from mkdocs nav"
 
 
-def test_readme_does_not_claim_automatic_minimization() -> None:
+def test_readme_mentions_minimization() -> None:
+    """v0.2 implements failure minimization."""
     text = README.read_text(encoding="utf-8")
     lowered = text.lower()
-    assert "smallest reproducible" not in lowered
-    assert "no automatic failure minimization" in lowered
+    # v0.2 implements failure minimization
+    assert "minimization" in lowered or "minimize" in lowered
