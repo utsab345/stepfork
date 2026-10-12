@@ -8,6 +8,7 @@ from rich.console import Console
 from stepfork import __version__
 from stepfork.cli.diff import diff_command
 from stepfork.cli.export import export_command
+from stepfork.cli.fork import fork_command
 from stepfork.cli.inspect import inspect_command
 from stepfork.cli.minimize import minimize_command
 from stepfork.cli.replay import replay_command
@@ -23,6 +24,7 @@ console = Console()
 
 app.command("diff")(diff_command)
 app.command("export")(export_command)
+app.command("fork")(fork_command)
 app.command("inspect")(inspect_command)
 app.command("minimize")(minimize_command)
 app.command("replay")(replay_command)
