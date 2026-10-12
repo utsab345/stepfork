@@ -36,8 +36,8 @@ def test_minimization_reduces_trace_size(tmp_path: Path) -> None:
     # Create a trace with multiple tool calls
     trace_path = tmp_path / "original.sftrace"
     with record("test-agent", output=str(trace_path)) as session:
-        result = agent_with_multiple_calls()
-        session.set_output(result)
+        agent_result = agent_with_multiple_calls()
+        session.set_output(agent_result)
 
     # Load the trace
     trace = Trace.load(trace_path)
@@ -70,8 +70,8 @@ def test_minimization_preserves_failure_signature(tmp_path: Path) -> None:
     # Create a trace
     trace_path = tmp_path / "failure.sftrace"
     with record("test-agent", output=str(trace_path)) as session:
-        result = agent_minimal()
-        session.set_output(result)
+        agent_result = agent_minimal()
+        session.set_output(agent_result)
 
     trace = Trace.load(trace_path)
 
@@ -99,8 +99,8 @@ def test_minimization_handles_successful_trace(tmp_path: Path) -> None:
     # Create a successful trace
     trace_path = tmp_path / "success.sftrace"
     with record("test-agent", output=str(trace_path)) as session:
-        result = agent_minimal()
-        session.set_output(result)
+        agent_result = agent_minimal()
+        session.set_output(agent_result)
 
     trace = Trace.load(trace_path)
 
@@ -128,8 +128,8 @@ def test_minimization_preserves_dependencies(tmp_path: Path) -> None:
     # Create a trace
     trace_path = tmp_path / "deps.sftrace"
     with record("test-agent", output=str(trace_path)) as session:
-        result = agent_with_multiple_calls()
-        session.set_output(result)
+        agent_result = agent_with_multiple_calls()
+        session.set_output(agent_result)
 
     trace = Trace.load(trace_path)
 
@@ -173,8 +173,8 @@ def test_minimization_counts_replay_attempts(tmp_path: Path) -> None:
     """Minimization should track replay attempts."""
     trace_path = tmp_path / "attempts.sftrace"
     with record("test-agent", output=str(trace_path)) as session:
-        result = agent_minimal()
-        session.set_output(result)
+        agent_result = agent_minimal()
+        session.set_output(agent_result)
 
     trace = Trace.load(trace_path)
     expected_output = {"result": 999}
