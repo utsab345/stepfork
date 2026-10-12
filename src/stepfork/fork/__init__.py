@@ -11,6 +11,7 @@ from stepfork.fork.models import (
     ForkResult,
     OverrideSpec,
 )
+from stepfork.fork.overrides import OverrideRegistry
 
 __all__ = [
     "ForkEngine",
@@ -18,6 +19,7 @@ __all__ = [
     "ForkInfo",
     "ForkPoint",
     "ForkResult",
+    "OverrideRegistry",
     "OverrideSpec",
     "fork_trace",
 ]

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -25,14 +24,25 @@ class ForkInfo(BaseModel):
 
 
 class OverrideSpec(BaseModel):
-    """Specification for overriding an event's output."""
+    """Specification for overriding an event's output during replay.
+
+    Overrides target specific events in the trace by step number or event ID,
+    allowing you to modify recorded outputs before continuing execution.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    target_type: Literal["tool", "llm", "event"]
-    target_identifier: str = Field(min_length=1)  # tool name, model name, or event ID
-    override_value: JsonValue
-    override_field: str = Field(default="output")  # output, input, etc.
+    step: int | None = Field(default=None, ge=0)
+    event_id: str | None = Field(default=None, min_length=1)
+    output: JsonValue = Field(..., description="New output value to use")
+
+    def __init__(self, **data: object) -> None:
+        """Validate that exactly one target is specified."""
+        super().__init__(**data)
+        if self.step is None and self.event_id is None:
+            raise ValueError("override requires either step or event_id")
+        if self.step is not None and self.event_id is not None:
+            raise ValueError("override cannot specify both step and event_id")
 
 
 @dataclass(frozen=True)

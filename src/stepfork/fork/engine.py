@@ -12,6 +12,7 @@ from stepfork.fork.models import (
     ForkResult,
     OverrideSpec,
 )
+from stepfork.fork.overrides import OverrideRegistry
 from stepfork.trace.models import Event, Trace
 
 
@@ -57,8 +58,17 @@ class ForkEngine:
         # Validate structural integrity
         self._validate_fork_point(events_before_fork, fork_step)
 
-        # Create new trace with preserved events
-        forked_trace = self._create_forked_trace(events_before_fork)
+        # Validate and prepare overrides
+        override_registry = OverrideRegistry(self.overrides)
+        override_registry.validate_overrides(events_before_fork, strict=True)
+
+        # Create new trace with preserved events and applied overrides
+        forked_trace = self._create_forked_trace(events_before_fork, override_registry)
+
+        # Count actually applied overrides
+        applied_count = sum(
+            1 for event in events_before_fork if override_registry.get_override(event)
+        )
 
         # Create fork info for provenance
         fork_info = ForkInfo(
@@ -67,7 +77,7 @@ class ForkEngine:
             fork_point_event_id=fork_event_id,
             fork_point_step=fork_step,
             fork_timestamp=datetime.now(UTC),
-            overrides_applied=len(self.overrides),
+            overrides_applied=applied_count,
         )
 
         return forked_trace, fork_info
@@ -141,14 +151,17 @@ class ForkEngine:
                     "which occurs after fork point"
                 )
 
-    def _create_forked_trace(self, events_before: list[Event]) -> Trace:
+    def _create_forked_trace(
+        self, events_before: list[Event], override_registry: OverrideRegistry
+    ) -> Trace:
         """Create a new trace with events before fork point.
 
         Args:
             events_before: Events to include in forked trace
+            override_registry: Registry of overrides to apply
 
         Returns:
-            New Trace instance with preserved events
+            New Trace instance with preserved events and applied overrides
         """
         # Create new trace with same agent name but new run_id
         forked_trace = Trace(
@@ -159,12 +172,17 @@ class ForkEngine:
             environment=self.trace.environment,
         )
 
-        # Add events with original IDs and metadata preserved
+        # Add events with original IDs and metadata preserved, applying overrides
         for event in events_before:
+            # Check for override
+            override = override_registry.get_override(event)
+            if override:
+                # Apply override to event
+                event = override_registry.apply_override(event, override)
+
             # Preserve original event, update run_id to new trace's run_id
             forked_event = event.model_copy(
-                update={"run_id": forked_trace.run_id},
-                deep=True
+                update={"run_id": forked_trace.run_id}, deep=True
             )
             # Manually append to maintain original step numbers and IDs
             forked_trace.events.append(forked_event)
