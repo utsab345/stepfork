@@ -6,7 +6,7 @@ All notable changes to Stepfork are recorded here. The format follows
 
 ## [Unreleased] - v0.2.0
 
-Automatic failure minimization using dependency-aware delta debugging.
+Automatic failure minimization and fork-at-step debugging with optional overrides.
 
 ### Added
 
@@ -20,6 +20,19 @@ Automatic failure minimization using dependency-aware delta debugging.
   and iteration limits.
 - Comprehensive unit tests, integration tests, and CLI tests for minimization.
 - Complete documentation in `docs/minimize.md` and updated CLI reference.
+- **Fork-at-step** debugging via `stepfork fork` command that creates new traces
+  at specific execution points while preserving all valid history before the fork.
+- Fork points can be specified by step number (`--at-step N`) or event ID
+  (`--at-event ID`).
+- Typed override system (Python API only) to modify tool_result and llm_response
+  outputs in forked traces via `OverrideSpec`.
+- Provenance tracking with `ForkInfo` metadata linking forked traces to parent
+  trace, fork point, timestamp, and applied overrides.
+- Structural validation ensures no broken parent dependencies and maintains
+  trace integrity.
+- 43 fork-specific tests covering fork engine, overrides, edge cases, and
+  integration scenarios.
+- Complete documentation in `docs/fork.md` with CLI and Python API examples.
 
 ### Changed
 
@@ -32,6 +45,12 @@ Automatic failure minimization using dependency-aware delta debugging.
 - Delta debugging uses binary search with dependency preservation. Very large
   traces (1000+ events) may require significant replay attempts.
 - Timeout handling uses SIGALRM on Unix systems; Windows support is limited.
+- Fork-at-step overrides are only available via Python API, not CLI.
+- Fork creates modified traces but does not automatically continue execution from
+  the fork point; replay must be invoked separately.
+- Overrides can only modify outputs (tool_result, llm_response), not inputs
+  (tool_call arguments or llm_request prompts).
+- No automatic divergence detection when replaying forked traces with overrides.
 
 ## [0.1.0a6] - 2026-10-10
 

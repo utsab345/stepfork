@@ -62,6 +62,10 @@ Compare → Define Expected Behavior → Export pytest → Verify Fix
   you want frozen with `@trace_tool` or `llm_request`.
 - **Behavioral diff** compares a buggy run against a corrected run and reports
   exactly which behaviors changed.
+- **Failure minimization** automatically finds the smallest trace that still
+  reproduces a failure via dependency-aware delta debugging.
+- **Fork-at-step** creates new traces at specific execution points with optional
+  output overrides for "what-if" debugging scenarios.
 - **pytest export** turns a recorded failure into a regression test that
   asserts the corrected behavior.
 - **Best-effort redaction** of known credential-shaped values at record time.
@@ -421,8 +425,8 @@ bundles, are in [docs/security.md](docs/security.md).
 
 ### v0.2 (Current)
 
-- **Failure minimization** - Automatic delta debugging to find minimal traces
-- Fork-at-step (planned)
+- **Failure minimization** - Automatic delta debugging to find minimal traces ([docs/minimize.md](docs/minimize.md))
+- **Fork-at-step** - Create new traces at specific execution points with optional overrides ([docs/fork.md](docs/fork.md))
 - Baselines (planned)
 
 ### v0.3
