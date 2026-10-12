@@ -25,9 +25,7 @@ def build_test_trace() -> Trace:
         ToolResult(name="search", output={"count": 5}, parent_id=call1.id)
     )
 
-    call2 = trace.add(
-        ToolCall(name="book", input={"id": "123"}, parent_id=result1.id)
-    )
+    call2 = trace.add(ToolCall(name="book", input={"id": "123"}, parent_id=result1.id))
     trace.add(
         ToolResult(name="book", output={"status": "confirmed"}, parent_id=call2.id)
     )

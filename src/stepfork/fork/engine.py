@@ -96,18 +96,14 @@ class ForkEngine:
             for event in self.trace.events:
                 if event.id == self.fork_point.event_id:
                     return event.id, event.step
-            raise ForkError(
-                f"event ID {self.fork_point.event_id!r} not found in trace"
-            )
+            raise ForkError(f"event ID {self.fork_point.event_id!r} not found in trace")
 
         if self.fork_point.step is not None:
             # Find event by step
             for event in self.trace.events:
                 if event.step == self.fork_point.step:
                     return event.id, event.step
-            raise ForkError(
-                f"step {self.fork_point.step} not found in trace"
-            )
+            raise ForkError(f"step {self.fork_point.step} not found in trace")
 
         raise ForkError("fork point must specify either event_id or step")
 
@@ -141,10 +137,7 @@ class ForkEngine:
         event_ids_before = {event.id for event in events_before}
 
         for event in events_before:
-            if (
-                event.parent_id is not None
-                and event.parent_id not in event_ids_before
-            ):
+            if event.parent_id is not None and event.parent_id not in event_ids_before:
                 raise ForkError(
                     f"fork at step {fork_step} would break parent dependency: "
                     f"event {event.id} references parent {event.parent_id} "

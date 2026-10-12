@@ -62,10 +62,7 @@ def test_fork_recorded_trace(tmp_path: Path) -> None:
     assert len(forked_trace.events) == result.forked_event_count
 
     # Verify all events have the same agent name
-    assert all(
-        event.run_id == forked_trace.run_id
-        for event in forked_trace.events
-    )
+    assert all(event.run_id == forked_trace.run_id for event in forked_trace.events)
 
 
 @pytest.mark.integration

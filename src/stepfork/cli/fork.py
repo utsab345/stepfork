@@ -72,15 +72,11 @@ def fork_command(
 
     # Validate fork point specification
     if at_step is None and at_event is None:
-        console.print(
-            "[red]Error: must specify either --at-step or --at-event[/red]"
-        )
+        console.print("[red]Error: must specify either --at-step or --at-event[/red]")
         raise typer.Exit(2)
 
     if at_step is not None and at_event is not None:
-        console.print(
-            "[red]Error: cannot specify both --at-step and --at-event[/red]"
-        )
+        console.print("[red]Error: cannot specify both --at-step and --at-event[/red]")
         raise typer.Exit(2)
 
     # Load the original trace

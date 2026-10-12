@@ -27,9 +27,7 @@ class OverrideRegistry:
                 self._by_step[override.step] = override
             if override.event_id is not None:
                 if override.event_id in self._by_event_id:
-                    raise ForkError(
-                        f"duplicate override for event {override.event_id}"
-                    )
+                    raise ForkError(f"duplicate override for event {override.event_id}")
                 self._by_event_id[override.event_id] = override
 
     def get_override(self, event: Event) -> OverrideSpec | None:
