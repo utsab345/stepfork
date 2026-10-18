@@ -9,6 +9,32 @@ A trace records what the agent *did*, including the bug. If you generate a test
 that asserts the recorded output, it passes against the very code that produced
 the recording, which is not a regression test.
 
+## Frozen-replay contract and limitations
+
+Stepfork's pytest export uses frozen replay: the generated test executes your
+trusted entrypoint with instrumented tool and LLM calls answered from the recorded
+trace. The contract is strict to preserve determinism and prevent silent
+acceptance of unexpected behavior.
+
+**Supported when:** the fixed implementation makes the same instrumented calls in
+the same order with the same inputs as recorded in the failure trace. The
+regression test can then assert the corrected output against the trace.
+
+**Not supported when:** the fix legitimately changes later tool arguments,
+invokes a tool not present in the recorded trace, or omits/moves recorded calls.
+In these cases, frozen replay will raise a divergence (e.g., `ReplayMismatchError`
+for changed inputs, or `ReplayExhaustedError`/unmatched calls for sequence
+changes). The test generated from the failure trace **cannot pass** on the fixed
+code because replay cannot satisfy the recorded sequence.
+
+When a fix changes the call sequence or arguments, record the *fixed* run and
+export a test from that trace instead. The exported test will fail on the buggy
+code (by replay divergence) and pass on the fixed code. `stepfork score` can help
+assess whether an expectation is claim-pinned (rejects the recorded run) or
+run-pinned (accepts it).
+
+---
+
 The regression test needs a separate **expected outcome**: the behavior you want
 after the bug is fixed. Pass it with `--expect-output`.
 

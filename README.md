@@ -31,7 +31,7 @@ If you're writing evals, Stepfork complements them: evals measure model quality 
 </p>
 
 <p align="center">
-  Install the alpha: <code>pip install --pre stepfork</code>
+  Install the current release: <code>pip install stepfork</code>
 </p>
 
 Product goal:
@@ -127,11 +127,10 @@ pip install --pre stepfork
 uv pip install --pre stepfork
 ```
 
-The `--pre` flag is required while Stepfork is a pre-release. You can also
-install from the tagged GitHub repository:
+You can also install from source or a tagged release:
 
 ```bash
-pip install "git+https://github.com/utsab345/stepfork.git@v0.1.0a6"
+pip install "git+https://github.com/utsab345/stepfork.git@v0.2.0"
 ```
 
 Requires Python 3.11, 3.12, or 3.13. This installs the `stepfork` CLI and the
@@ -325,9 +324,12 @@ business outcome - it lives in `expected.json`, defined by a human.
 |---|---|
 | `stepfork validate [PATH] [--partial] [--verify-integrity]` | Check a `.sftrace` bundle structurally (and its integrity). |
 | `stepfork inspect [PATH] [--json] [--events] [--errors-only] [--step N]` | Review a bundle locally. |
-| `stepfork replay [PATH] --entrypoint MODULE:FUNCTION [--mode M]` | Rerun the entrypoint with dependencies answered from the trace. |
+| `stepfork replay [PATH] --entrypoint MODULE:FUNCTION [--mode M] [--allow-live-tool NAME] [--verbose]` | Rerun the entrypoint with dependencies answered from the trace. |
+| `stepfork minimize [PATH] --entrypoint MODULE:FUNCTION [--expect-output FILE] [--mode M] [--output PATH] [--overwrite] [--timeout SECONDS] [--attempts N]` | Minimize a failing trace to the smallest reproducible subset. |
+| `stepfork fork [PATH] [--at-step N \| --at-event ID] [--output PATH] [--overwrite]` | Fork a trace at a specific step (Python API for overrides). |
+| `stepfork score [TEST] [--expect-output PATH] [--bundle PATH] [--json]` | Score an exported expectation against a mutant battery. |
 | `stepfork diff [BASELINE] [CANDIDATE] [--json]` | Compare the behavior of two runs. |
-| `stepfork export [PATH] --pytest --entrypoint MODULE:FUNCTION [--expect-output JSON] [--expect-trajectory JSON] [--output FILE] [--overwrite]` | Generate an executable pytest regression test. |
+| `stepfork export [PATH] --pytest --entrypoint MODULE:FUNCTION [--expect-output JSON] [--expect-trajectory JSON] [--output FILE] [--overwrite] [--mode M] [--allow-live-tool NAME]` | Generate an executable pytest regression test. |
 
 The full reference (arguments, examples, expected output, and common errors)
 is in [docs/cli.md](docs/cli.md).
@@ -379,7 +381,7 @@ sources live in `docs/`.
 - [Release checklist](docs/release-checklist.md)
 - [PyPI publishing checklist](docs/pypi-publishing.md)
 - [Early adopter guide](docs/community/early-adopter-guide.md)
-- [Latest release notes (v0.1.0a6)](docs/releases/v0.1.0a6.md)
+- [Latest release notes (v0.2.0)](docs/releases/v0.2.0.md)
 - [Changelog](CHANGELOG.md)
 
 ## Security and Limitations
@@ -387,8 +389,8 @@ sources live in `docs/`.
 Stepfork is experimental. The API, CLI, and `.sftrace` trace format may change
 before v1.0.
 
-- **Alpha on PyPI.** `pip install --pre stepfork` installs the current
-  pre-release; the API and trace format may still change.
+- **Beta status.** `pip install stepfork` installs the current release; the API
+  and trace format may still change before v1.0.
 - **Limited integrations.** Optional adapters cover the OpenAI Python SDK
   (synchronous and asynchronous, non-streaming `chat.completions.create`) and
   LangGraph (synchronous and asynchronous `BaseChatModel` generation and

@@ -88,6 +88,20 @@ class MinimizationEngine:
         """
         # Step 1: Detect the original failure signature
         try:
+            try:
+                from stepfork.trace.replay_policy import ReplayPolicy
+
+                ReplayPolicy(self.mode)
+            except ValueError as exc:
+                return MinimizationResult(
+                    success=False,
+                    original_event_count=len(self.trace.events),
+                    minimized_event_count=None,
+                    replay_attempts=self.total_replay_attempts,
+                    preserved_failure=False,
+                    is_minimal=False,
+                    error_message=f"Invalid replay mode {self.mode!r}: {exc}",
+                )
             original_signature = detect_failure_signature(
                 self.trace,
                 self.entrypoint,
