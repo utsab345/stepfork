@@ -49,7 +49,7 @@ def minimize_command(
         typer.Option(
             "--mode",
             "-m",
-            help="Replay mode: frozen (default), live, or hybrid",
+            help="Replay mode: frozen (default), live, forbidden, manual, or derived",
         ),
     ] = "frozen",
     output: Annotated[
@@ -126,6 +126,13 @@ def minimize_command(
 
     # Run minimization
     console.print("[yellow]Detecting failure signature...[/yellow]")
+    try:
+        from stepfork.trace.replay_policy import ReplayPolicy
+
+        ReplayPolicy(mode)
+    except ValueError:
+        console.print(f"[red]Invalid replay mode {mode!r}.[/red]")
+        raise typer.Exit(2) from None
     engine = MinimizationEngine(
         trace,
         entrypoint,

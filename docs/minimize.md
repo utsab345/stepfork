@@ -85,7 +85,7 @@ stepfork minimize <trace> --entrypoint MODULE:FUNCTION [OPTIONS]
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--expect-output FILE` | JSON file with expected output for comparison | None |
-| `--mode`, `-m` | Replay mode: `frozen`, `live`, or `hybrid` | `frozen` |
+| `--mode`, `-m` | Replay mode: `frozen`, `live`, `forbidden`, `manual`, or `derived` | `frozen` |
 | `--output`, `-o` | Path for the minimized `.sftrace` bundle | `<trace>-minimized.sftrace` |
 | `--overwrite` | Overwrite the output bundle if it exists | `false` |
 | `--timeout SECONDS` | Timeout for each replay attempt | `30.0` |

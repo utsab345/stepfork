@@ -1,7 +1,7 @@
 # CLI Reference
 
 The `stepfork` CLI manages `.sftrace` bundles. This page documents every
-command as of v0.1.0a6. Run `stepfork --help` for an up-to-date summary.
+command as of v0.2.0. Run `stepfork --help` for an up-to-date summary.
 
 ```text
 Usage: stepfork [OPTIONS] COMMAND [ARGS]...
@@ -22,6 +22,8 @@ Commands:
 - [inspect](#inspect)
 - [replay](#replay)
 - [minimize](#minimize)
+- [fork](#fork)
+- [score](#score)
 - [diff](#diff)
 - [export](#export)
 
@@ -261,7 +263,7 @@ Options:
 | Option | Description |
 |---|---|
 | `--expect-output FILE` | JSON file with expected output for comparison. |
-| `--mode`, `-m` | Replay mode: `frozen`, `live`, or `hybrid`. Default: `frozen`. |
+| `--mode`, `-m` | Replay mode: `frozen`, `live`, `forbidden`, `manual`, or `derived`. Default: `frozen`. |
 | `--output`, `-o` | Path for the minimized `.sftrace` bundle. Default: `<path>-minimized.sftrace`. |
 | `--overwrite` | Overwrite the output bundle if it exists. Default: `false`. |
 | `--timeout SECONDS` | Timeout in seconds for each replay attempt. Default: `30.0`. |
