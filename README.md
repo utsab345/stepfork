@@ -25,7 +25,7 @@ Wrap tool and LLM boundaries you want captured. Frozen replay strictly matches
 those calls and substitutes recorded responses, so the wrapped bodies are not
 run again. Calls outside instrumented boundaries are not intercepted.
 
-![Stepfork workflow](assets/stepfork-workflow.png)
+<img width="1125" height="1398" alt="image" src="https://github.com/user-attachments/assets/13157c1b-e235-467f-89de-1c3a5a7b4e0d" />
 
 ## Features
 
