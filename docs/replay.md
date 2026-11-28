@@ -103,6 +103,16 @@ replay rejects the bundle and recommends `stepfork validate --verify-integrity`.
 | `manual` | Reject dependency calls that are not explicitly approved. |
 | `derived` | Reserved; not supported in v0.1. |
 
+## Forked traces and stale evidence
+
+When replay loads a forked `.sftrace` bundle with persisted fork provenance, it classifies substituted dependency outputs:
+
+- `recorded`: substituted from a recording with no upstream fork override affecting that output.
+- `potentially_stale`: substituted from a recording, but an upstream override changed earlier state; this is not verified evidence for the modified path.
+- `freshly_executed`: produced during replay (live tool or hybrid live LLM).
+
+If fresh execution is unavailable or disabled, frozen replay may still complete, but potentially stale substitutions are reported as unverified. This is an upper-bound classification based on fork provenance, not dependency-aware invalidation.
+
 In `frozen` and `live`, a call whose name, provider, model, inputs, or
 fingerprints do not match the recording raises `ReplayMismatchError` before
 the dependency body executes. `manual` and `forbidden` reject calls before

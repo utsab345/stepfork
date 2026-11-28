@@ -449,11 +449,10 @@ stepfork fork failure.sftrace --at-step 8 -o minimal.sftrace
 - Overrides are only available via Python API
 - CLI can only fork without modifications
 
-**⚠️ Reports stale downstream outputs, but does not re-execute them**
-- Fork names the retained recorded outputs that sit after an overridden step
-- It does not work out which of them actually depend on the changed value,
-  and it does not re-run anything: see
-  [Downstream outputs after an override](#downstream-outputs-after-an-override)
+**⚠️ Classifies stale downstream outputs, but cannot prove modified-path correctness in frozen replay**
+- Fork names retained recorded outputs after an overridden step
+- Replay surfaces those outputs as potentially stale evidence when fork provenance is present
+- Frozen replay cannot freshly execute unavailable dependencies; it can only classify reused recorded outputs
 
 **❌ Cannot override inputs**
 - Can only override outputs (tool_result, llm_response)
@@ -484,11 +483,11 @@ that output's inputs actually changed, and it does not mark the event the
 override replaced, because that value is the override rather than a reused
 recording.
 
-What this does not give you: replay does not consult the classification
-yet, so a call that appears as `"substituted"` in `executed_calls` is not
-by itself proof that the output belongs to the modified path. Neither is
-the classification persisted into a saved bundle, so it is only available
-from the `fork_trace()` call that produced it.
+Replay behavior:
+- When a forked bundle carries provenance, replay marks substituted outputs after the earliest overridden step as `potentially_stale`.
+- Freshly executed calls (live mode or hybrid live LLM calls) are reported as `freshly_executed`.
+- If fresh execution is unavailable or disabled, replay may still complete in frozen mode, but stale substitutions are reported as unverified for the modified path, not as verified results.
+- This is an upper-bound classification, not dependency-aware invalidation.
 
 ### Replay Integration
 

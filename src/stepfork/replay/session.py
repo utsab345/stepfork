@@ -14,6 +14,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Literal, Self
 
+from stepfork.fork.provenance import read_fork_provenance
 from stepfork.replay.exceptions import (
     RecordedDependencyError,
     ReplayError,
@@ -24,7 +25,7 @@ from stepfork.replay.exceptions import (
 from stepfork.replay.plan import RecordedCall, extract_recorded_calls
 from stepfork.trace.canonical import canonical_json_bytes
 from stepfork.trace.hashing import hash_json
-from stepfork.trace.models import EventStatus, JsonValue, Trace
+from stepfork.trace.models import EventStatus, EventType, JsonValue, Trace
 from stepfork.trace.redaction import redact_json
 from stepfork.trace.replay_policy import ReplayPolicy
 
@@ -49,6 +50,8 @@ class MatchedCall:
     kind: Literal["tool", "llm"]
     label: str
     action: Literal["substituted", "executed"]
+    evidence: Literal["recorded", "potentially_stale", "freshly_executed"] = "recorded"
+    stale_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -61,6 +64,8 @@ class ExecutedCall:
     input: JsonValue
     status: EventStatus | None
     action: Literal["substituted", "executed"]
+    evidence: Literal["recorded", "potentially_stale", "freshly_executed"] = "recorded"
+    stale_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -98,8 +103,10 @@ class ReplaySession:
         mode: ReplayPolicy | str,
         live_llms: set[str] | frozenset[str] | None = None,
         allow_live_tools: set[str] | frozenset[str] | None = None,
+        source_path: str | Path | None = None,
     ) -> None:
         self.trace = trace
+        self.source_path = Path(source_path) if source_path is not None else None
         self.hybrid = mode == "hybrid"
         if self.hybrid:
             if not live_llms:
@@ -118,6 +125,7 @@ class ReplaySession:
         if any(not isinstance(name, str) or not name for name in self.allow_live_tools):
             raise ValueError("allow_live_tools must contain non-empty tool names")
         self.calls: list[RecordedCall] = extract_recorded_calls(trace)
+        self._stale_output_call_ids = self._load_stale_output_call_ids()
         unknown_tools = self.allow_live_tools - {
             call.label for call in self.calls if call.kind == "tool"
         }
@@ -151,12 +159,14 @@ class ReplaySession:
         allow_live_tools: set[str] | frozenset[str] | None = None,
     ) -> ReplaySession:
         """Build a replay session from a `.sftrace` bundle or loaded trace."""
+        source_path = None if isinstance(path, Trace) else Path(path)
         trace = path if isinstance(path, Trace) else Trace.load(Path(path))
         return cls(
             trace,
             mode=mode,
             live_llms=live_llms,
             allow_live_tools=allow_live_tools,
+            source_path=source_path,
         )
 
     @property
@@ -359,6 +369,7 @@ class ReplaySession:
             )
 
         self._cursor = position + 1
+        evidence, stale_reason = self._evidence_for_call(expected, live_llm=live_llm)
         matched = MatchedCall(
             index=position,
             kind=kind,
@@ -366,6 +377,8 @@ class ReplaySession:
             action="executed"
             if live_llm or self.mode is ReplayPolicy.LIVE
             else "substituted",
+            evidence=evidence,
+            stale_reason=stale_reason,
         )
         self._executed.append(
             ExecutedCall(
@@ -375,6 +388,8 @@ class ReplaySession:
                 input=redact_json(input).value,
                 status=expected.status if matched.action == "substituted" else None,
                 action=matched.action,
+                evidence=evidence,
+                stale_reason=stale_reason,
             )
         )
 
@@ -512,6 +527,73 @@ class ReplaySession:
             "  run `stepfork validate --verify-integrity` on the trace; "
             "legacy or tampered recordings cannot be used for strict replay"
         )
+
+    def _load_stale_output_call_ids(self) -> set[str]:
+        """Map persisted fork provenance to replay call ids.
+
+        A forked bundle records which output events were replaced. Any recorded
+        output event after the earliest replaced event was captured under an
+        upstream state that the fork changed. Replaying it is still possible in
+        frozen mode, but the result must be classified as potentially stale.
+        """
+        if self.source_path is None:
+            return set()
+        provenance = read_fork_provenance(self.source_path)
+        if provenance is None or not provenance.overridden_event_ids:
+            return set()
+
+        overridden = set(provenance.overridden_event_ids)
+        event_steps = {event.id: event.step for event in self.trace.events}
+        overridden_steps = [
+            event_steps[event_id] for event_id in overridden if event_id in event_steps
+        ]
+        if not overridden_steps:
+            return set()
+        first_overridden_step = min(overridden_steps)
+
+        stale_output_event_ids = {
+            event.id
+            for event in self.trace.events
+            if event.type in {EventType.TOOL_RESULT, EventType.LLM_RESPONSE}
+            and event.step > first_overridden_step
+            and event.id not in overridden
+        }
+        if not stale_output_event_ids:
+            return set()
+
+        stale_call_ids: set[str] = set()
+        for call in self.calls:
+            result_event_id = self._result_event_id(call.call_event_id)
+            if result_event_id in stale_output_event_ids:
+                stale_call_ids.add(call.call_event_id)
+        return stale_call_ids
+
+    def _result_event_id(self, call_event_id: str) -> str | None:
+        children = [
+            event
+            for event in self.trace.events
+            if event.parent_id == call_event_id
+            and event.type in {EventType.TOOL_RESULT, EventType.LLM_RESPONSE}
+        ]
+        if children:
+            return children[0].id
+        return None
+
+    def _evidence_for_call(
+        self, expected: RecordedCall, *, live_llm: bool
+    ) -> tuple[
+        Literal["recorded", "potentially_stale", "freshly_executed"],
+        str | None,
+    ]:
+        if live_llm or self.mode is ReplayPolicy.LIVE:
+            return "freshly_executed", None
+        if expected.call_event_id in self._stale_output_call_ids:
+            return (
+                "potentially_stale",
+                "recorded output was captured before an upstream fork override; "
+                "replay substitution does not verify the modified path",
+            )
+        return "recorded", None
 
 
 def _preview(value: JsonValue) -> str:
