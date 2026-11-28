@@ -33,6 +33,7 @@ run again. Calls outside instrumented boundaries are not intercepted.
 - Inspect and validate traces; check bundle integrity.
 - Replay instrumented tool and LLM calls with recorded responses.
 - Compare traces and inspect behavior-level differences.
+- Report instrumentation coverage from recorded calls.
 - Save named local baselines and gate trace changes in CI
   ([guide](docs/baselines.md)).
 - Export pytest regression tests with output and trajectory expectations.
@@ -113,9 +114,9 @@ The core API is framework-independent. Optional adapters currently support:
 - **LangGraph / LangChain:** sync and async chat-model generation and wrapped
   function tools; streaming is not supported.
 
-An example [GitHub Actions workflow](.github/workflows/agent-regression.yml)
-runs committed regression tests without provider credentials. Stepfork does
-not currently provide a reusable GitHub Action or an MCP adapter. See the
+Offline GitHub Actions examples cover frozen replay and named baseline
+comparisons without provider credentials. Stepfork does not currently provide
+a reusable GitHub Action or an MCP adapter. See the
 [integration details](docs/integrations.md).
 
 ## Contributing

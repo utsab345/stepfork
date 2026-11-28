@@ -413,14 +413,14 @@ Override tool results to test "what-if" scenarios:
 # What if the API returned more results?
 fork_trace(
     "trace.sftrace",
-    ForkPoint(step=5),
+    ForkPoint(event_id=None, step=5),
     overrides=[OverrideSpec(step=5, output={"results": [...100 items...]})]
 )
 
 # What if the database was empty?
 fork_trace(
     "trace.sftrace",
-    ForkPoint(step=3),
+    ForkPoint(event_id=None, step=3),
     overrides=[OverrideSpec(step=3, output={"rows": []})]
 )
 ```
@@ -449,13 +449,45 @@ stepfork fork failure.sftrace --at-step 8 -o minimal.sftrace
 - Overrides are only available via Python API
 - CLI can only fork without modifications
 
-**❌ Does not detect divergence**
-- Fork creates a static trace
-- Divergence detection requires replay integration (planned)
+**⚠️ Classifies stale downstream outputs, but cannot prove modified-path correctness in frozen replay**
+- Fork names retained recorded outputs after an overridden step
+- Replay surfaces those outputs as potentially stale evidence when fork provenance is present
+- Frozen replay cannot freshly execute unavailable dependencies; it can only classify reused recorded outputs
 
 **❌ Cannot override inputs**
 - Can only override outputs (tool_result, llm_response)
 - Cannot change tool call arguments or LLM prompts
+
+### Downstream outputs after an override
+
+An override replaces a recorded output at one step. Every recorded output
+that was captured after that step but still before the fork point was
+produced under the upstream state the override changed, so it is not
+evidence for the modified execution path.
+
+`fork_trace()` reports this on its result:
+
+```python
+result = fork_trace(
+    trace,
+    ForkPoint(event_id=None, step=6),
+    overrides=[OverrideSpec(step=2, output={"count": 99})],
+)
+assert result.overridden_steps == (2,)
+assert len(result.stale_event_ids) == 2  # the results at steps 4 and 6
+```
+
+The classification is an upper bound, not a dependency analysis. It marks
+every recorded output after the earliest overridden step, whether or not
+that output's inputs actually changed, and it does not mark the event the
+override replaced, because that value is the override rather than a reused
+recording.
+
+Replay behavior:
+- When a forked bundle carries provenance, replay marks substituted outputs after the earliest overridden step as `potentially_stale`.
+- Freshly executed calls (live mode or hybrid live LLM calls) are reported as `freshly_executed`.
+- If fresh execution is unavailable or disabled, replay may still complete in frozen mode, but stale substitutions are reported as unverified for the modified path, not as verified results.
+- This is an upper-bound classification, not dependency-aware invalidation.
 
 ### Replay Integration
 
@@ -469,7 +501,7 @@ from stepfork.replay import ReplaySession
 # 1. Fork with overrides
 fork_result = fork_trace(
     "original.sftrace",
-    ForkPoint(step=5),
+    ForkPoint(event_id=None, step=5),
     overrides=[OverrideSpec(step=5, output={"new": "value"})],
     output_path="forked.sftrace",
 )

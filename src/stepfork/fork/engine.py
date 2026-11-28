@@ -13,6 +13,9 @@ from stepfork.fork.models import (
     OverrideSpec,
 )
 from stepfork.fork.overrides import OverrideRegistry
+from stepfork.fork.provenance import ForkProvenance, write_fork_provenance
+from stepfork.fork.staleness import classify_stale_outputs
+from stepfork.trace.integrity import write_bundle_integrity
 from stepfork.trace.models import Event, Trace
 
 
@@ -230,10 +233,35 @@ def fork_trace(
         # Execute fork
         forked_trace, fork_info = engine.fork()
 
+        # A recorded output after an overridden step was captured under the
+        # upstream state the override changed, so substituting it during replay
+        # is not evidence for the modified execution path. Name it here rather
+        # than let it pass as an ordinary substitution.
+        stale = classify_stale_outputs(forked_trace, OverrideRegistry(overrides))
+
         # Save if output path provided
         saved_path: str | None = None
         if output_path is not None:
             saved_path = str(forked_trace.save(output_path, overwrite=overwrite))
+            # fork_info describes the fork and is the only record that this
+            # bundle is one; discarding it left a saved bundle indistinguishable
+            # from a recorded run. The override targets are collected here
+            # because a count cannot tell a reader which outputs were replaced.
+            registry = OverrideRegistry(overrides)
+            write_fork_provenance(
+                saved_path,
+                ForkProvenance(
+                    fork_info=fork_info,
+                    overridden_event_ids=[
+                        event.id
+                        for event in forked_trace.events
+                        if registry.get_override(event) is not None
+                    ],
+                ),
+            )
+            # The bundle was saved before its provenance existed, so the record
+            # is rewritten to cover the file that was just added.
+            write_bundle_integrity(Path(saved_path))
 
         return ForkResult(
             success=True,
@@ -243,6 +271,8 @@ def fork_trace(
             fork_point_step=fork_info.fork_point_step,
             fork_point_event_id=fork_info.fork_point_event_id,
             overrides_applied=fork_info.overrides_applied,
+            overridden_steps=stale.overridden_steps,
+            stale_event_ids=stale.stale_event_ids,
         )
 
     except Exception as exc:

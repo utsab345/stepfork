@@ -7,6 +7,7 @@ from rich.console import Console
 
 from stepfork import __version__
 from stepfork.cli.baseline import baseline_app
+from stepfork.cli.coverage import coverage_command
 from stepfork.cli.diff import diff_command
 from stepfork.cli.export import export_command
 from stepfork.cli.fork import fork_command
@@ -25,6 +26,7 @@ app = typer.Typer(
 
 console = Console()
 
+app.command("coverage")(coverage_command)
 app.command("diff")(diff_command)
 app.command("export")(export_command)
 app.command("fork")(fork_command)

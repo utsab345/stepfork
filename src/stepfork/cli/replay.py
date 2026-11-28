@@ -102,7 +102,7 @@ def replay_command(
 
     try:
         with ReplaySession.from_trace(
-            trace,
+            path,
             mode=mode,
             allow_live_tools=set(allow_live_tool) if allow_live_tool else None,
         ) as replay:
@@ -241,14 +241,27 @@ def _print_report(
     console.print()
 
     console.print("[bold]Dependency Calls[/bold]")
+    stale_count = 0
     if not matched:
         console.print("  (no dependency calls matched)")
     else:
         for item in matched:
+            evidence = getattr(item, "evidence", "recorded")
+            label = item.action
+            if evidence == "potentially_stale":
+                stale_count += 1
+                label = f"{item.action}, potentially stale"
+            elif evidence == "freshly_executed":
+                label = f"{item.action}, freshly executed"
             console.print(
-                f"  {item.index + 1}. {item.kind} {item.label} "
-                f"[green]({item.action})[/green]"
+                f"  {item.index + 1}. {item.kind} {item.label} [green]({label})[/green]"
             )
+    if stale_count:
+        console.print(
+            f"  [yellow]{stale_count} substituted call(s) marked potentially stale "
+            "because an upstream fork override changed earlier recorded state."
+            "[/yellow]"
+        )
     if remaining:
         console.print(f"  [yellow]{remaining} recorded call(s) unmatched[/yellow]")
     console.print(
@@ -263,7 +276,17 @@ def _print_report(
     else:
         execution = "COMPLETED"
     console.print(f"Execution: {execution}")
+    stale_count = sum(
+        1
+        for item in matched
+        if getattr(item, "evidence", "recorded") == "potentially_stale"
+    )
     console.print(f"Recorded behavior: {behavior}")
+    if stale_count:
+        console.print(
+            "Evidence: [yellow]POTENTIALLY STALE[/yellow] "
+            f"({stale_count} substituted call(s) after an upstream fork override)"
+        )
 
     if divergence is not None:
         console.print("Status: [red]DIVERGED[/red]")
@@ -274,6 +297,14 @@ def _print_report(
     if status == "reproduced_failure" and agent_exc is not None:
         console.print(
             f"Status: [yellow]REPRODUCED FAILURE[/yellow] ({type(agent_exc).__name__})"
+        )
+    elif stale_count:
+        console.print(
+            "Status: [yellow]COMPLETED WITH POTENTIALLY STALE OUTPUTS[/yellow]"
+        )
+        console.print(
+            "  Fresh execution is unavailable in this mode; substituted stale "
+            "outputs are not verified against the modified path."
         )
     else:
         console.print("Status: [green]COMPLETED[/green]")
