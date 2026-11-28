@@ -50,7 +50,7 @@ def run_agent() -> dict[str, object]:
 
 
 def write_targets(tmp_path: Path) -> None:
-    pkg = tmp_path / "targetpkg"
+    pkg = tmp_path / "replaystaletarget"
     pkg.mkdir()
     (pkg / "__init__.py").write_text("", encoding="utf-8")
     (pkg / "targets.py").write_text(textwrap.dedent(TARGETS), encoding="utf-8")
@@ -79,7 +79,7 @@ def test_replay_cli_reports_potentially_stale_outputs(
             "replay",
             str(tmp_path / "fork.sftrace"),
             "--entrypoint",
-            "targetpkg.targets:run_agent",
+            "replaystaletarget.targets:run_agent",
         ],
         catch_exceptions=False,
     )
