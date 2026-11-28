@@ -1,7 +1,7 @@
 [project]
 name = "stepfork"
 dynamic = ["version"]
-description = "Behavioral regression testing for AI agents."
+description = "Open-source behavioral regression testing for AI agents."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 license = { text = "Apache-2.0" }

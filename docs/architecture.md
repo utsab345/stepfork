@@ -14,8 +14,13 @@ failed agent run
       |
  behavioral diff  src/stepfork/diff/
       |
+ minimize failure src/stepfork/minimize/
+       |
   pytest export   src/stepfork/export/
 ```
+
+`fork/` creates a trace from a selected step. `score/` assesses expectations
+in exported tests; neither is required for the record-to-regression workflow.
 
 The `.sftrace` format and its storage, validation, redaction, and integrity
 logic all live under `src/stepfork/trace/` and are documented in
@@ -78,8 +83,9 @@ Read-only summaries of a bundle for the `stepfork inspect` command.
 
 ### `cli/`
 
-Typer commands: `validate`, `inspect`, `replay`, `diff`, `export`, wired in
-`cli/main.py`. `src/stepfork/__main__.py` provides `python -m stepfork`.
+Typer commands: `validate`, `inspect`, `replay`, `diff`, `export`, `minimize`,
+`fork`, `score`, and `run`, wired in `cli/main.py`.
+`src/stepfork/__main__.py` provides `python -m stepfork`.
 
 ## Security boundaries
 
@@ -90,7 +96,11 @@ Typer commands: `validate`, `inspect`, `replay`, `diff`, `export`, wired in
 - Integrity metadata is a checksum, not a signature; see
   [security.md](security.md).
 
-## Reserved packages
+## Trace operations
 
-`fork/` and `minimize/` are placeholders for v0.2 (fork-at-step and failure
-minimization) and contain no v0.1 behavior.
+- `fork/` builds a new trace from a selected step and supports event-output
+  overrides through the Python API.
+- `minimize/` reduces a trace while checking whether the selected failure
+  continues to reproduce.
+- `score/` is part of `export/`; it evaluates exported expectations without
+  executing the entrypoint.
