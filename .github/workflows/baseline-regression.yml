@@ -1,0 +1,42 @@
+name: Behavioral baseline regression
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quickstart-baseline:
+    name: Compare offline quickstart behavior
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.1.0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Stepfork and project dependencies
+        run: uv sync --locked --python 3.13
+
+      - name: Load the reviewed baseline
+        run: uv run stepfork baseline save quickstart-order examples/quickstart/baseline.sftrace
+
+      - name: Run baseline workflow integration test
+        run: uv run pytest -q tests/integration/test_baseline_workflow.py
+
+      - name: Record current offline agent behavior
+        run: uv run python -m examples.quickstart.record_candidate --output baseline-candidate.sftrace
+
+      - name: Gate candidate against the baseline
+        run: uv run stepfork baseline compare quickstart-order baseline-candidate.sftrace

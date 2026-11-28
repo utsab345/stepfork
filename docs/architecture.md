@@ -65,6 +65,12 @@ Compares two traces as behavior. `engine.py` extracts ordered `BehaviorStep`
 entries and aligns them; `compare.py` computes structural field differences;
 `models.py` defines the machine-readable `DiffResult`.
 
+### `baseline/`
+
+Stores named, integrity-verified `.sftrace` bundles under a local directory.
+It validates trace compatibility and delegates behavioral comparisons to
+`diff_traces`; it does not introduce another trace format.
+
 ### `export/`
 
 Generates the regression test.
@@ -84,7 +90,7 @@ Read-only summaries of a bundle for the `stepfork inspect` command.
 ### `cli/`
 
 Typer commands: `validate`, `inspect`, `replay`, `diff`, `export`, `minimize`,
-`fork`, `score`, and `run`, wired in `cli/main.py`.
+`fork`, `score`, `run`, and `baseline`, wired in `cli/main.py`.
 `src/stepfork/__main__.py` provides `python -m stepfork`.
 
 ## Security boundaries

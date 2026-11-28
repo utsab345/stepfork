@@ -6,6 +6,7 @@ import typer
 from rich.console import Console
 
 from stepfork import __version__
+from stepfork.cli.baseline import baseline_app
 from stepfork.cli.diff import diff_command
 from stepfork.cli.export import export_command
 from stepfork.cli.fork import fork_command
@@ -33,6 +34,7 @@ app.command("replay")(replay_command)
 app.command("run")(run_command)
 app.command("score")(score_command)
 app.command("validate")(validate_command)
+app.add_typer(baseline_app, name="baseline")
 
 
 def version_callback(value: bool) -> None:

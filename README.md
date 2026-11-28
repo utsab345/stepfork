@@ -33,6 +33,8 @@ run again. Calls outside instrumented boundaries are not intercepted.
 - Inspect and validate traces; check bundle integrity.
 - Replay instrumented tool and LLM calls with recorded responses.
 - Compare traces and inspect behavior-level differences.
+- Save named local baselines and gate trace changes in CI
+  ([guide](docs/baselines.md)).
 - Export pytest regression tests with output and trajectory expectations.
 - Minimize failing traces and fork traces at a selected step.
 - Use optional OpenAI Python SDK and LangGraph adapters.
