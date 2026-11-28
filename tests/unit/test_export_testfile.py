@@ -42,10 +42,11 @@ def test_reads_the_literals_the_generator_writes(tmp_path: Path) -> None:
     assert exported.trajectory_expectation is None
 
 
-def test_reads_the_absolute_path_form(tmp_path: Path) -> None:
-    """A bundle too far up the tree is written as an absolute Path(...)."""
+def test_reads_a_deeply_nested_relative_path(tmp_path: Path) -> None:
+    """Deep descendant bundles stay readable as __file__-relative paths."""
     test = _generated(tmp_path, depth=5)
-    assert "Path('/" in test.read_text(encoding="utf-8")
+    contents = test.read_text(encoding="utf-8")
+    assert "Path(__file__).resolve().parent / 'level0'" in contents
     exported = read_exported_test(test)
     assert exported.trace_path == (
         tmp_path / "level0/level1/level2/level3/level4/refund.sftrace"

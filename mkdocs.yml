@@ -27,6 +27,7 @@ nav:
       - replay.md
       - hybrid.md
       - diff.md
+      - baselines.md
       - pytest-export.md
       - minimize.md
       - fork.md

@@ -18,6 +18,9 @@ order?
   (`order_status`), and both implementations.
 - `demo.py` - a self-checking demonstration of the whole failure-to-test
   workflow.
+- `record_candidate.py` - records the corrected deterministic agent for the
+  baseline CI example.
+- `baseline.sftrace` - reviewed known-good trace used by the baseline workflow.
 - `expected.json` - the corrected expected output used by
   `stepfork export --expect-output`.
 

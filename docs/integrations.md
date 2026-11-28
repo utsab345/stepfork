@@ -73,11 +73,12 @@ This mirrors an adapter pattern with three layers:
 
 ### GitHub Actions
 
-- Implemented as an example workflow (`.github/workflows/agent-regression.yml`):
-  it installs the optional extra, runs committed `stepfork export` tests under
-  frozen replay, and configures no provider credentials. It builds on the
-  existing CLI and runtime; it ships no special test tooling.
-- Status: example implemented; a reusable published Action is future work.
+- Example workflows are implemented in
+  `.github/workflows/agent-regression.yml` (frozen pytest replay) and
+  `.github/workflows/baseline-regression.yml` (named baseline comparison).
+  They configure no provider credentials and use the existing CLI.
+- Status: repository examples implemented; a reusable published Action is
+  future work.
 
 ## Constraints
 

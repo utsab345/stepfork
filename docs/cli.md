@@ -1,7 +1,7 @@
 # CLI Reference
 
 The `stepfork` CLI manages `.sftrace` bundles. This page documents every
-command as of v0.2.1. Run `stepfork --help` for an up-to-date summary.
+implemented command. Run `stepfork --help` for an up-to-date summary.
 
 ```text
 Usage: stepfork [OPTIONS] COMMAND [ARGS]...
@@ -28,6 +28,7 @@ Commands:
 - [diff](#diff)
 - [export](#export)
 - [run](#run)
+- [baseline](#baseline)
 
 Exit code conventions:
 
@@ -38,6 +39,49 @@ Exit code conventions:
   failure the trace records.
 - `3` `validate --verify-integrity` on a legacy bundle without integrity
   metadata.
+
+---
+
+## baseline
+
+Manage integrity-verified, local named trace baselines. All subcommands accept
+`--directory PATH`; the default store is `.stepfork/baselines/`.
+
+### Save
+
+```text
+stepfork baseline save NAME TRACE [--directory PATH]
+```
+
+Saves a strict, complete, integrity-verified `.sftrace` bundle. Names must
+match the baseline naming rules in [Behavioral baselines](baselines.md).
+Existing baselines are never replaced; use a new name for an approved change.
+
+### List and show
+
+```text
+stepfork baseline list [--json] [--directory PATH]
+stepfork baseline show NAME [--json] [--directory PATH]
+```
+
+Both commands verify traces before displaying them. `list --json` and
+`show --json` emit machine-readable metadata.
+
+### Compare
+
+```text
+stepfork baseline compare NAME CANDIDATE \
+  [--max-changes N] [--json] [--directory PATH]
+```
+
+Compares behavior steps using the existing behavioral diff. By default, any
+changed, added, or removed step fails with exit code `1`; `--max-changes N`
+sets a non-negative step-count threshold. Exit code `0` means the threshold
+was met, and `2` means an input is missing, corrupt, incompatible, or
+unreadable. Comparison does not execute the agent or call an LLM.
+
+See [Behavioral baselines](baselines.md) for workflow, CI, and security
+details.
 
 ---
 

@@ -70,11 +70,11 @@ def diff_command(
         sys.stdout.write("\n")
         raise typer.Exit(0 if result.equivalent else 1)
 
-    _print_diff(result)
+    print_diff(result)
     raise typer.Exit(0 if result.equivalent else 1)
 
 
-def _print_diff(result: DiffResult) -> None:
+def print_diff(result: DiffResult) -> None:
     console.print("[bold]Stepfork Behavioral Diff[/bold]")
     console.print()
     console.print(f"Baseline:  {result.baseline.path or '(in-memory trace)'}")

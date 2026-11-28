@@ -65,6 +65,7 @@ in this repository.
 - [Concepts](concepts.md) - the vocabulary you need.
 - [Recording](recording.md), [Replay](replay.md), [Diff](diff.md),
   [pytest export](pytest-export.md) - how each feature works.
+- [Behavioral baselines](baselines.md) - save, compare, and gate named traces.
 - [Trace format](trace-format.md) - what a `.sftrace` bundle contains.
 - [Security](security.md) - redaction, integrity checks, and their limits.
 - [Troubleshooting](troubleshooting.md) - common errors and fixes.

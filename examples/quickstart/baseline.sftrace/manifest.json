@@ -1,0 +1,21 @@
+{
+  "format": "stepfork",
+  "schema_version": "0.1",
+  "run_id": "run_c33b1f195ae0413688cdcef4760702e7",
+  "agent_name": "order-agent",
+  "created_at": "2026-11-28T12:16:35.465670Z",
+  "status": "completed",
+  "failure": null,
+  "environment": {
+    "python": "3.12",
+    "os": "linux",
+    "stepfork_version": "0.2.1"
+  },
+  "totals": {
+    "events": 4,
+    "llm_calls": 0,
+    "tool_calls": 1,
+    "cost_usd": null,
+    "duration_ms": 0
+  }
+}
