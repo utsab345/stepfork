@@ -5,6 +5,7 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from stepfork import record, trace_tool
@@ -56,7 +57,7 @@ def write_targets(tmp_path: Path) -> None:
 
 
 def test_replay_cli_reports_potentially_stale_outputs(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     trace_path = tmp_path / "base.sftrace"
     with record("agent", output=trace_path) as session:
